@@ -68,7 +68,99 @@ def open_analytics_database():
     """)
     connection.execute("CREATE INDEX IF NOT EXISTS analytics_events_created_at ON analytics_events(created_at)")
     connection.execute("CREATE INDEX IF NOT EXISTS analytics_events_type_created_at ON analytics_events(event_type, created_at)")
+    connection.execute("""
+        CREATE TABLE IF NOT EXISTS shared_books (
+            book_id INTEGER PRIMARY KEY,
+            created_at INTEGER NOT NULL,
+            book_json TEXT NOT NULL
+        )
+    """)
+    connection.execute("CREATE INDEX IF NOT EXISTS shared_books_created_at ON shared_books(created_at)")
     return connection
+
+
+def clean_shared_book(payload):
+    if not isinstance(payload, dict):
+        raise ValueError("invalid_book")
+
+    def text_field(name, maximum, required=False):
+        value = payload.get(name, "")
+        if not isinstance(value, str):
+            raise ValueError(f"invalid_{name}")
+        value = value.strip()
+        if len(value) > maximum or (required and not value):
+            raise ValueError(f"invalid_{name}")
+        return value
+
+    title = text_field("title", 300, required=True)
+    author = text_field("author", 200, required=True)
+    publisher = text_field("publisher", 200)
+    isbn = re.sub(r"[^0-9X]", "", text_field("isbn", 32).upper())
+    if isbn and not ISBN_PATTERN.fullmatch(isbn):
+        isbn = ""
+
+    try:
+        points = payload.get("points")
+        cycles = payload.get("cycles", 0)
+        if isinstance(points, bool) or isinstance(cycles, bool):
+            raise ValueError
+        points = int(points)
+        cycles = int(cycles)
+    except (TypeError, ValueError) as error:
+        raise ValueError("invalid_points_or_cycles") from error
+    if not 40 <= points <= 180 or not 0 <= cycles < 8:
+        raise ValueError("invalid_points_or_cycles")
+
+    region = text_field("region", 16)
+    language = text_field("language", 16)
+    condition = text_field("condition", 16)
+    if region not in {"", "north", "central", "south", "east", "islands"}:
+        region = ""
+    if language not in {"", "zh", "en", "ja", "other"}:
+        language = ""
+    if condition not in {"", "excellent", "good", "fair", "damaged"}:
+        condition = ""
+
+    seller_id = text_field("sellerId", 80, required=True)
+    if not re.fullmatch(r"[A-Za-z0-9_-]+", seller_id):
+        raise ValueError("invalid_sellerId")
+    seller_name = text_field("sellerName", 80) or "書友"
+    location = text_field("location", 160, required=True)
+    book_location = text_field("bookLocation", 200)
+    try:
+        listing_bonus_points = payload.get("listingBonusPoints", 0)
+        if isinstance(listing_bonus_points, bool):
+            raise ValueError
+        listing_bonus_points = int(listing_bonus_points)
+    except (TypeError, ValueError) as error:
+        raise ValueError("invalid_listing_bonus") from error
+    listing_bonus_points = max(0, min(listing_bonus_points, 50))
+
+    risk_flags = payload.get("riskFlags", [])
+    if not isinstance(risk_flags, list):
+        risk_flags = []
+    risk_flags = [flag.strip()[:120] for flag in risk_flags if isinstance(flag, str)][:5]
+    return {
+        "isbn": isbn,
+        "title": title,
+        "author": author,
+        "publisher": publisher,
+        "points": points,
+        "cycles": cycles,
+        "condition": condition,
+        "conditionNotes": text_field("conditionNotes", 500),
+        "conditionChecks": payload.get("conditionChecks") if isinstance(payload.get("conditionChecks"), dict) else {},
+        "location": location,
+        "bookLocation": book_location,
+        "region": region,
+        "language": language,
+        "sellerId": seller_id,
+        "sellerName": seller_name,
+        "listingBonusPoints": listing_bonus_points,
+        "riskFlags": risk_flags,
+        "media": [],
+        "tone": "green",
+    }
 
 
 def clean_analytics_event(event):
@@ -676,6 +768,36 @@ class BookLoopHandler(SimpleHTTPRequestHandler):
 
     def do_POST(self):
         request = urlparse(self.path)
+        if request.path == "/api/books":
+            try:
+                book = clean_shared_book(self.read_json_body())
+            except (ValueError, TypeError) as error:
+                return self.send_json(400, {"error": str(error) or "invalid_book"})
+            created_at = int(time.time())
+            connection = open_analytics_database()
+            try:
+                for _ in range(3):
+                    book["id"] = secrets.randbelow(8_000_000_000_000_000) + 1
+                    book["createdAt"] = created_at
+                    try:
+                        connection.execute(
+                            "INSERT INTO shared_books(book_id, created_at, book_json) VALUES (?, ?, ?)",
+                            (book["id"], created_at, json.dumps(book, ensure_ascii=False)),
+                        )
+                        break
+                    except sqlite3.IntegrityError:
+                        continue
+                else:
+                    return self.send_json(503, {"error": "shared_book_id_unavailable"})
+                connection.commit()
+                return self.send_json(201, {"book": book})
+            except sqlite3.Error as error:
+                connection.rollback()
+                print(f"Shared book could not be saved: {error}", file=sys.stderr)
+                return self.send_json(500, {"error": "shared_book_unavailable"})
+            finally:
+                connection.close()
+
         if request.path == "/api/analytics/events":
             try:
                 event = clean_analytics_event(self.read_json_body())
@@ -834,7 +956,21 @@ class BookLoopHandler(SimpleHTTPRequestHandler):
         if request.path != "/api/books":
             return super().do_GET()
 
-        isbn = normalize_isbn(parse_qs(request.query).get("isbn", [""])[0])
+        query = parse_qs(request.query)
+        isbn = normalize_isbn(query.get("isbn", [""])[0])
+        if not isbn:
+            connection = open_analytics_database()
+            try:
+                rows = connection.execute(
+                    "SELECT book_json FROM shared_books ORDER BY created_at DESC, book_id DESC"
+                ).fetchall()
+                return self.send_json(200, {"books": [json.loads(row["book_json"]) for row in rows]})
+            except (sqlite3.Error, json.JSONDecodeError) as error:
+                print(f"Shared books could not be loaded: {error}", file=sys.stderr)
+                return self.send_json(500, {"error": "shared_books_unavailable"})
+            finally:
+                connection.close()
+
         if not ISBN_PATTERN.fullmatch(isbn):
             return self.send_json(400, {"error": "invalid_isbn"})
 

@@ -21,8 +21,10 @@ page session, but is not uploaded or saved after a refresh.
 
 ## Wishlist and transaction prototype
 
-The wishlist, local book matching, point top-ups, and order states are a
-browser-local prototype persisted in `localStorage`; local demo accounts have
+Book listings are stored by the Python API in SQLite and are shared across
+browsers using the same server; the shared catalog feeds both the library and
+search results. The wishlist, point top-ups, and order states remain a
+browser-local prototype persisted in `localStorage`. Local demo accounts have
 separate IDs and separate wallets, orders, and wishlists, but are not synced
 between browsers or devices and do not authenticate real Google/Apple accounts.
 Each local demo account receives 150 starter points once, after its first
