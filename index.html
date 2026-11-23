@@ -75,8 +75,7 @@
 			</section>
 			<section id="section-wishlist" class="section">
 				<div class="between"><h2 class="section-title">願望清單</h2><label class="inline-label"><input id="wishlist-public" type="checkbox" checked onchange="toggleWishlistVisibility()">公開給書友</label></div>
-				<p class="subtle">公開後其他書友可看到你的想找清單；媒合以 ISBN、書名與作者比對站內書庫，不會呼叫外部 AI。此原型的公開清單僅存在目前瀏覽器，尚未跨使用者同步。</p>
-				<div class="prototype-note">智能媒合原型 · 以書目相似度推薦可能符合的書，正式 AI 服務尚未串接。</div>
+				<p class="subtle">公開後其他書友可看到你的想找清單；系統會依 ISBN、書名與作者比對站內書庫。公開清單目前僅儲存在此瀏覽器。</p>
 				<div class="form-card">
 					<div class="field"><label for="wish-title">想找的書名</label><input id="wish-title" placeholder="例如：原子習慣"></div>
 					<div class="two-col">
@@ -457,7 +456,7 @@
 			const matches=new Map();
 			wishes.forEach(wish=>books.filter(book=>!book.reservedBy).forEach(book=>{const score=matchScore(wish,book);if(score>0&&(!matches.has(book.id)||matches.get(book.id).score<score))matches.set(book.id,{book,score,wish})}));
 			const sorted=[...matches.values()].sort((a,b)=>b.score-a.score);
-			document.getElementById('wishlist-matches').innerHTML=sorted.length?sorted.map(({book,score,wish})=>`<article class="wishlist-item"><div class="between"><strong>${score>=10?'高度':'可能'}符合：${safe(book.title)}</strong><span class="badge">${safe(wish.title)}</span></div><div class="book-meta">願望媒合原型 · ${safe(book.sellerName||'書友')}的在架書</div><div class="trade-actions"><button class="btn btn-small" type="button" data-trade-book-id="${safe(book.id)}">洽談交易</button></div></article>`).join(''):'<div class="empty">目前沒有符合公開願望的在架書籍。</div>';
+			document.getElementById('wishlist-matches').innerHTML=sorted.length?sorted.map(({book,score,wish})=>`<article class="wishlist-item"><div class="between"><strong>${score>=10?'高度':'可能'}符合：${safe(book.title)}</strong><span class="badge">${safe(wish.title)}</span></div><div class="book-meta">${safe(book.sellerName||'書友')}的在架書</div><div class="trade-actions"><button class="btn btn-small" type="button" data-trade-book-id="${safe(book.id)}">洽談交易</button></div></article>`).join(''):'<div class="empty">目前沒有符合公開願望的在架書籍。</div>';
 		}
 		function matchScore(wish,book){
 			const isbn=String(wish.isbn||'').replace(/[-\s]/g,'').toLowerCase();
@@ -1081,6 +1080,71 @@
 			return null;
 		}
 		let pointEstimateRequestId=0;
+		function estimateBookPointsLocally(values){
+			const isbn=normalizeIsbn(values.isbn);
+			const validIsbn=/^(?:\d{13}|\d{9}[\dX])$/.test(isbn);
+			const cycleCount=Math.max(0,Math.min(Number(values.cycles)||0,50));
+			let points=55;
+			if(validIsbn)points+=15;
+			if(values.title.trim())points+=5;
+			if(values.author.trim())points+=10;
+			if(values.publisher.trim())points+=5;
+
+			const textbookKeywords=['教科','課本','教材','習題','參考書','學習','練習'];
+			if(textbookKeywords.some(keyword=>values.title.includes(keyword)))points+=20;
+
+			const mediaCount=Math.max(0,Math.min(Number(values.mediaCount)||0,5));
+			const videoCount=Math.max(0,Math.min(Number(values.videoCount)||0,mediaCount));
+			if(mediaCount===0)points-=8;
+			else if(mediaCount===1)points+=3;
+			else points+=8;
+			if(videoCount)points+=Math.min(videoCount*3,6);
+
+			const conditionAdjustments={excellent:10,good:5,fair:0,damaged:-15};
+			points+=conditionAdjustments[values.condition]||0;
+			const notes=values.conditionNotes.toLowerCase();
+			const damageKeywords=['破損','撕裂','缺頁','水漬','受潮','霉','髒污','折角','塗寫','嚴重'];
+			const hasDamageEvidence=text=>damageKeywords.some(keyword=>{
+				let position=text.indexOf(keyword);
+				while(position>=0){
+					const prefix=text.slice(Math.max(0,position-2),position);
+					if(!['無','沒','不'].some(negation=>prefix.includes(negation)))return true;
+					position=text.indexOf(keyword,position+keyword.length);
+				}
+				return false;
+			});
+			let conditionNote='未提供額外受損或完整度描述';
+			if(hasDamageEvidence(notes)){points-=10;conditionNote='受損描述會降低環點'}
+			else if(['全新','幾乎全新','封面完整','無破損'].some(keyword=>notes.includes(keyword))){points+=5;conditionNote='完整度描述會提高可信度'}
+
+			const checks=[
+				['missingPage','缺頁',12],
+				['handwriting','筆記',8],
+				['damage','破損',12],
+				['stains','污漬',8],
+			];
+			const checkReasons=checks.map(([key,label,penalty])=>{
+				const value=values[key];
+				if(value==='yes'){points-=penalty;return `${label}：有，環點 -${penalty}`}
+				if(value==='no'){points+=2;return `${label}：無，環點 +2`}
+				return `${label}：未確認`;
+			});
+			const conditionLabels={excellent:'近全新',good:'良好',fair:'普通',damaged:'明顯受損'};
+			points=Math.max(40,Math.min(points-Math.min(cycleCount*4,30),180));
+			return {
+				points,
+				reasons:[
+					validIsbn?'ISBN 已驗證':'ISBN 未驗證',
+					values.title&&values.author&&values.publisher?'書目資料完整':'部分書目需手動補齊',
+					textbookKeywords.some(keyword=>values.title.includes(keyword))?'課外／教材類別加權':'一般圖書',
+					`已流轉 ${cycleCount} 次，依次數調整`,
+					mediaCount?`已附 ${mediaCount} 個媒體證據`:'未附照片或影片，可信度較低',
+					`書況：${conditionLabels[values.condition]||'未選擇'}`,
+					conditionNote,
+					...checkReasons,
+				],
+			};
+		}
 		async function updatePointEstimate(){
 			const requestId=++pointEstimateRequestId;
 			const isbn=normalizeIsbn(document.getElementById('input-isbn').value);
@@ -1109,22 +1173,25 @@
 			const damage=document.querySelector('input[name="damage"]:checked')?.value||'unknown';
 			const stains=document.querySelector('input[name="stains"]:checked')?.value||'unknown';
 			const params=new URLSearchParams({isbn,title,author,publisher,cycles,condition,conditionNotes,mediaCount,videoCount,missingPage,handwriting,damage,stains});
+			const values={isbn,title,author,publisher,cycles,condition,conditionNotes,mediaCount,videoCount,missingPage,handwriting,damage,stains};
 			try{
 				const response=await fetch('/api/points?'+params);
 				if(!response.ok)throw new Error('point estimate unavailable');
 				const data=await response.json();
+				if(!Number.isInteger(data.points)||!Array.isArray(data.reasons))throw new Error('invalid point estimate response');
 				if(requestId!==pointEstimateRequestId)return;
 				document.getElementById('input-points').value=data.points;
 				document.getElementById('estimated-points').textContent=`${data.points} 環點`;
 				document.querySelector('#point-estimate ul').innerHTML=(data.reasons||[]).map(reason=>`<li>${safe(reason)}</li>`).join('');
 				estimate.hidden=false;
 			}catch(error){
-				console.error('Point estimate failed',error);
-				if(requestId===pointEstimateRequestId){
-					document.getElementById('estimated-points').textContent='暫無法估價';
-					document.querySelector('#point-estimate ul').innerHTML='<li>估價服務目前無法使用；請稍後重試，成功估價後才能上架。</li>';
-					estimate.hidden=false;
-				}
+				console.warn('Point estimate API unavailable; using local rules',error);
+				if(requestId!==pointEstimateRequestId)return;
+				const data=estimateBookPointsLocally(values);
+				document.getElementById('input-points').value=data.points;
+				document.getElementById('estimated-points').textContent=`${data.points} 環點`;
+				document.querySelector('#point-estimate ul').innerHTML=data.reasons.map(reason=>`<li>${safe(reason)}</li>`).join('');
+				estimate.hidden=false;
 			}
 		}
 		async function fetchBookInfo(){
