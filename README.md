@@ -24,14 +24,50 @@ page session, but is not uploaded or saved after a refresh.
 The wishlist, local book matching, point top-ups, and order states are a
 browser-local prototype persisted in `localStorage`; they are not synchronized
 between users or devices. Matching is based on ISBN, title, and author rather
-than an external AI service. Top-up methods and the pickup/cooldown controls
-are simulations and do not charge money or contact a convenience-store
-provider. The prototype starts the 72-hour seller-point hold after its simulated
-paid-pickup event, and only records circulation rewards after settlement.
+than an external AI service. Book trades offer book-for-book, points, and cash
+options; the prototype cash amount reuses the book's points value at NT$1 per
+point and never collects real money. Buyers can specify a convenience-store
+branch or choose an illustrative campus/MRT book-box location. Book-box
+coordinates do not confirm an actual deployed box. Top-up, payment, delivery,
+and pickup/cooldown controls are simulations and do not charge money or contact
+a convenience-store provider. The prototype starts the 72-hour seller-point
+hold after its simulated delivery-completion event, and only records
+circulation rewards after settlement.
 
 Production transactions require a backend, a real payment/top-up provider, and
 authenticated, verified C2C fulfillment webhooks. Client-side controls must
 never be treated as payment or pickup proof.
+
+## Private platform analytics (prototype)
+
+The platform dashboard is served at **其他功能 → 平台數據管理**. It requires a
+server-side admin password and an authenticated, HttpOnly session cookie; the
+password must never be embedded in `index.html` or committed to the repository.
+Set a unique password of at least 16 characters before starting the server:
+
+```sh
+export BOOKLOOP_ADMIN_PASSWORD='replace-with-a-long-random-secret'
+export BOOKLOOP_ANALYTICS_DB='/path/to/private-data/bookloop-analytics.sqlite3'
+python3 server.py
+```
+
+`BOOKLOOP_ANALYTICS_DB` is optional and defaults to
+`bookloop_analytics.sqlite3` in the project directory. Keep the database on a
+persistent, access-controlled disk and back it up securely. The built-in
+`python3 server.py` listener is for local/development use; production should put
+the app behind HTTPS and a maintained production web server, set
+`X-Forwarded-Proto: https` only from a trusted proxy, and restrict network
+access to the service. GitHub Pages alone cannot run this backend or protect
+the dashboard; serve the frontend and `/api` from the same trusted origin.
+
+The current sign-in, books, orders, and fulfillment remain browser-local
+simulations. Analytics events are anonymous, client-reported prototype
+signals—not verified customers, authoritative inventory, or real transaction
+records. The ESG panel uses an illustrative 1.02 kg CO₂e per simulated settled
+circulation, not a measured or independently verified impact. Do not use these
+figures as production business or sustainability claims. The CSV export
+contains event-level anonymous references and book/trade fields; protect and
+handle downloaded files as private data.
 
 ## External bookstore links
 

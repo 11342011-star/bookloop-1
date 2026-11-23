@@ -1,0 +1,5 @@
+__pycache__/
+*.py[cod]
+bookloop_analytics.sqlite3
+bookloop_analytics.sqlite3-shm
+bookloop_analytics.sqlite3-wal

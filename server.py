@@ -1,9 +1,17 @@
+import csv
+import hashlib
+import hmac
+import io
 import json
 import math
+import os
 import re
+import secrets
+import sqlite3
 import sys
 import threading
 import time
+from http.cookies import SimpleCookie
 from html.parser import HTMLParser
 import xml.etree.ElementTree as ET
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -26,6 +34,128 @@ _universities_lock = threading.Lock()
 _mrt_stations = []
 _mrt_stations_fetched_at = 0
 _mrt_stations_lock = threading.Lock()
+_admin_sessions = {}
+_admin_sessions_lock = threading.Lock()
+_admin_login_attempts = {}
+_admin_login_attempts_lock = threading.Lock()
+ADMIN_SESSION_SECONDS = 8 * 60 * 60
+ADMIN_LOGIN_WINDOW_SECONDS = 15 * 60
+ADMIN_LOGIN_MAX_ATTEMPTS = 5
+ESG_ESTIMATED_CO2_KG_PER_CIRCULATION = 1.02
+ANALYTICS_EVENT_TYPES = {"customer_seen", "book_listed", "trade_created", "trade_settled"}
+ANALYTICS_REGIONS = {"north", "central", "south", "east", "islands"}
+ANALYTICS_LANGUAGES = {"zh", "en", "ja", "other"}
+ANALYTICS_CONDITIONS = {"excellent", "good", "fair", "damaged"}
+
+
+def analytics_database_path():
+    return Path(os.environ.get("BOOKLOOP_ANALYTICS_DB", ROOT / "bookloop_analytics.sqlite3"))
+
+
+def open_analytics_database():
+    path = analytics_database_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    connection = sqlite3.connect(path, timeout=10)
+    connection.row_factory = sqlite3.Row
+    connection.execute("""
+        CREATE TABLE IF NOT EXISTS analytics_events (
+            event_id TEXT PRIMARY KEY,
+            actor_id TEXT NOT NULL,
+            event_type TEXT NOT NULL,
+            created_at INTEGER NOT NULL,
+            payload_json TEXT NOT NULL
+        )
+    """)
+    connection.execute("CREATE INDEX IF NOT EXISTS analytics_events_created_at ON analytics_events(created_at)")
+    connection.execute("CREATE INDEX IF NOT EXISTS analytics_events_type_created_at ON analytics_events(event_type, created_at)")
+    return connection
+
+
+def clean_analytics_event(event):
+    if not isinstance(event, dict):
+        raise ValueError("invalid_event")
+    event_id = event.get("eventId")
+    client_id = event.get("clientId")
+    event_type = event.get("type")
+    if not isinstance(event_id, str) or not re.fullmatch(r"[A-Za-z0-9_-]{16,80}", event_id):
+        raise ValueError("invalid_event_id")
+    if not isinstance(client_id, str) or not re.fullmatch(r"[A-Za-z0-9_-]{16,80}", client_id):
+        raise ValueError("invalid_client_id")
+    if event_type not in ANALYTICS_EVENT_TYPES:
+        raise ValueError("invalid_event_type")
+
+    raw_payload = event.get("payload") or {}
+    if not isinstance(raw_payload, dict):
+        raise ValueError("invalid_payload")
+    payload = {}
+    if event_type == "book_listed":
+        isbn = normalize_isbn(str(raw_payload.get("isbn", "")))[:13]
+        payload = {
+            "isbn": isbn if re.fullmatch(r"(?:\d{13}|\d{9}[\dX])", isbn) else "",
+            "region": raw_payload.get("region") if raw_payload.get("region") in ANALYTICS_REGIONS else "",
+            "language": raw_payload.get("language") if raw_payload.get("language") in ANALYTICS_LANGUAGES else "",
+            "condition": raw_payload.get("condition") if raw_payload.get("condition") in ANALYTICS_CONDITIONS else "",
+            "points": min(180, max(1, int(raw_payload.get("points", 1)))),
+        }
+    elif event_type in {"trade_created", "trade_settled"}:
+        mode = raw_payload.get("mode")
+        if mode not in {"swap", "points", "money"}:
+            raise ValueError("invalid_trade_mode")
+        isbn = normalize_isbn(str(raw_payload.get("isbn", "")))[:13]
+        payload = {
+            "mode": mode,
+            "isbn": isbn if re.fullmatch(r"(?:\d{13}|\d{9}[\dX])", isbn) else "",
+        }
+
+    return {
+        "event_id": event_id,
+        "actor_id": hashlib.sha256(client_id.encode("utf-8")).hexdigest(),
+        "event_type": event_type,
+        "payload_json": json.dumps(payload, ensure_ascii=False, separators=(",", ":")),
+    }
+
+
+def summarize_analytics(events):
+    customers = set()
+    books = []
+    trades_created = 0
+    settled = 0
+    regions = {}
+    languages = {}
+    conditions = {}
+    daily = {}
+    for event in events:
+        day = time.strftime("%Y-%m-%d", time.gmtime(event["created_at"]))
+        daily.setdefault(day, {"date": day, "booksListed": 0, "tradesCreated": 0, "tradesSettled": 0})
+        payload = json.loads(event["payload_json"])
+        if event["event_type"] == "customer_seen":
+            customers.add(event["actor_id"])
+        elif event["event_type"] == "book_listed":
+            books.append(payload)
+            daily[day]["booksListed"] += 1
+            for key, target in (("region", regions), ("language", languages), ("condition", conditions)):
+                value = payload.get(key)
+                if value:
+                    target[value] = target.get(value, 0) + 1
+        elif event["event_type"] == "trade_created":
+            trades_created += 1
+            daily[day]["tradesCreated"] += 1
+        elif event["event_type"] == "trade_settled":
+            settled += 1
+            daily[day]["tradesSettled"] += 1
+    return {
+        "customers": len(customers),
+        "booksListed": len(books),
+        "uniqueBooks": len({book["isbn"] for book in books if book["isbn"]}),
+        "tradesCreated": trades_created,
+        "tradesSettled": settled,
+        "circulations": settled,
+        "estimatedCo2Kg": round(settled * ESG_ESTIMATED_CO2_KG_PER_CIRCULATION, 2),
+        "regions": regions,
+        "languages": languages,
+        "conditions": conditions,
+        "daily": sorted(daily.values(), key=lambda item: item["date"]),
+    }
 
 
 class GoogleBooksDetailsParser(HTMLParser):
@@ -472,11 +602,206 @@ class BookLoopHandler(SimpleHTTPRequestHandler):
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
         self.end_headers()
         self.wfile.write(body)
 
+    def read_json_body(self, max_bytes=16_384):
+        if self.headers.get_content_type() != "application/json":
+            raise ValueError("invalid_content_type")
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+        except ValueError as error:
+            raise ValueError("invalid_content_length") from error
+        if length < 1 or length > max_bytes:
+            raise ValueError("invalid_request_size")
+        try:
+            return json.loads(self.rfile.read(length))
+        except (json.JSONDecodeError, UnicodeDecodeError) as error:
+            raise ValueError("invalid_json") from error
+
+    def admin_session_token(self):
+        cookie = SimpleCookie()
+        try:
+            cookie.load(self.headers.get("Cookie", ""))
+        except Exception:
+            return None
+        morsel = cookie.get("bookloop_admin_session")
+        if not morsel:
+            return None
+        token = morsel.value
+        now = time.time()
+        with _admin_sessions_lock:
+            for existing, expires_at in list(_admin_sessions.items()):
+                if expires_at <= now:
+                    del _admin_sessions[existing]
+            if _admin_sessions.get(token, 0) <= now:
+                return None
+        return token
+
+    def require_admin(self):
+        if self.admin_session_token():
+            return True
+        self.send_json(401, {"error": "admin_auth_required"})
+        return False
+
+    def analytics_range(self):
+        requested = parse_qs(urlparse(self.path).query).get("days", ["30"])[0]
+        if requested == "all":
+            return 0
+        try:
+            days = int(requested)
+        except ValueError as error:
+            raise ValueError("invalid_range") from error
+        if days not in {7, 30, 90, 365, 0}:
+            raise ValueError("invalid_range")
+        return days
+
+    def analytics_events(self, days):
+        connection = open_analytics_database()
+        try:
+            if days:
+                cutoff = int(time.time()) - days * 24 * 60 * 60
+                rows = connection.execute(
+                    "SELECT actor_id, event_type, created_at, payload_json FROM analytics_events WHERE created_at >= ? ORDER BY created_at",
+                    (cutoff,),
+                ).fetchall()
+            else:
+                rows = connection.execute(
+                    "SELECT actor_id, event_type, created_at, payload_json FROM analytics_events ORDER BY created_at"
+                ).fetchall()
+            return [dict(row) for row in rows]
+        finally:
+            connection.close()
+
+    def do_POST(self):
+        request = urlparse(self.path)
+        if request.path == "/api/analytics/events":
+            try:
+                event = clean_analytics_event(self.read_json_body())
+            except (ValueError, TypeError) as error:
+                return self.send_json(400, {"error": str(error) or "invalid_event"})
+            connection = open_analytics_database()
+            try:
+                cursor = connection.execute(
+                    "INSERT OR IGNORE INTO analytics_events(event_id, actor_id, event_type, created_at, payload_json) VALUES (?, ?, ?, ?, ?)",
+                    (event["event_id"], event["actor_id"], event["event_type"], int(time.time()), event["payload_json"]),
+                )
+                connection.commit()
+                return self.send_json(202, {"accepted": cursor.rowcount == 1})
+            finally:
+                connection.close()
+
+        if request.path == "/api/admin/login":
+            password = os.environ.get("BOOKLOOP_ADMIN_PASSWORD", "")
+            if len(password) < 16:
+                return self.send_json(503, {"error": "admin_password_not_configured"})
+            client_ip = self.client_address[0]
+            now = time.time()
+            with _admin_login_attempts_lock:
+                attempts = [at for at in _admin_login_attempts.get(client_ip, []) if now - at < ADMIN_LOGIN_WINDOW_SECONDS]
+                if len(attempts) >= ADMIN_LOGIN_MAX_ATTEMPTS:
+                    _admin_login_attempts[client_ip] = attempts
+                    return self.send_json(429, {"error": "admin_login_rate_limited"})
+                attempts.append(now)
+                _admin_login_attempts[client_ip] = attempts
+            try:
+                body = self.read_json_body(4_096)
+            except ValueError as error:
+                return self.send_json(400, {"error": str(error)})
+            submitted = body.get("password", "") if isinstance(body, dict) else ""
+            if not isinstance(submitted, str) or not hmac.compare_digest(
+                submitted.encode("utf-8"), password.encode("utf-8")
+            ):
+                return self.send_json(401, {"error": "invalid_admin_credentials"})
+            token = secrets.token_urlsafe(32)
+            with _admin_sessions_lock:
+                _admin_sessions[token] = now + ADMIN_SESSION_SECONDS
+            with _admin_login_attempts_lock:
+                _admin_login_attempts.pop(client_ip, None)
+            cookie = (
+                f"bookloop_admin_session={token}; HttpOnly; SameSite=Strict; "
+                f"Path=/; Max-Age={ADMIN_SESSION_SECONDS}"
+            )
+            forwarded_proto = self.headers.get("X-Forwarded-Proto", "").split(",", 1)[0].strip().lower()
+            if forwarded_proto == "https":
+                cookie += "; Secure"
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.send_header("Set-Cookie", cookie)
+            self.end_headers()
+            self.wfile.write(json.dumps({"authenticated": True}).encode("utf-8"))
+            return
+
+        if request.path == "/api/admin/logout":
+            token = self.admin_session_token()
+            if token:
+                with _admin_sessions_lock:
+                    _admin_sessions.pop(token, None)
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("Set-Cookie", "bookloop_admin_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0")
+            self.end_headers()
+            self.wfile.write(b'{"authenticated":false}')
+            return
+
+        return self.send_json(404, {"error": "not_found"})
+
     def do_GET(self):
         request = urlparse(self.path)
+        if request.path == "/api/admin/session":
+            if not self.require_admin():
+                return
+            return self.send_json(200, {"authenticated": True})
+        if request.path == "/api/admin/analytics":
+            if not self.require_admin():
+                return
+            try:
+                days = self.analytics_range()
+                events = self.analytics_events(days)
+            except ValueError as error:
+                return self.send_json(400, {"error": str(error)})
+            summary = summarize_analytics(events)
+            summary["rangeDays"] = days
+            summary["dataNote"] = "統計來自前端原型回報；登入、訂單履約與 ESG 效益未經平台或物流方驗證。減碳數值為每次流轉 1.02 kg CO₂e 的原型估算。"
+            return self.send_json(200, summary)
+        if request.path == "/api/admin/analytics.csv":
+            if not self.require_admin():
+                return
+            try:
+                days = self.analytics_range()
+                events = self.analytics_events(days)
+            except ValueError as error:
+                return self.send_json(400, {"error": str(error)})
+            output = io.StringIO(newline="")
+            writer = csv.writer(output)
+            writer.writerow(("timestamp_utc", "event_type", "anonymous_customer_ref", "isbn", "region", "language", "condition", "points", "trade_mode", "estimated_co2_kg"))
+            for event in events:
+                payload = json.loads(event["payload_json"])
+                writer.writerow((
+                    time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(event["created_at"])),
+                    event["event_type"],
+                    event["actor_id"],
+                    payload.get("isbn", ""),
+                    payload.get("region", ""),
+                    payload.get("language", ""),
+                    payload.get("condition", ""),
+                    payload.get("points", ""),
+                    payload.get("mode", ""),
+                    ESG_ESTIMATED_CO2_KG_PER_CIRCULATION if event["event_type"] == "trade_settled" else "",
+                ))
+            body = ("\ufeff" + output.getvalue()).encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "text/csv; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("Content-Disposition", 'attachment; filename="bookloop-platform-analytics.csv"')
+            self.end_headers()
+            self.wfile.write(body)
+            return
         if request.path == "/api/points":
             query = parse_qs(request.query)
             isbn = normalize_isbn(query.get("isbn", [""])[0])
