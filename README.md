@@ -21,12 +21,21 @@ page session, but is not uploaded or saved after a refresh.
 
 ## Wishlist and transaction prototype
 
-Book listings are stored by the Python API in SQLite and are shared across
-browsers using the same server; the shared catalog feeds both the library and
-search results. The wishlist, point top-ups, and order states remain a
-browser-local prototype persisted in `localStorage`. Local demo accounts have
-separate IDs and separate wallets, orders, and wishlists, but are not synced
-between browsers or devices and do not authenticate real Google/Apple accounts.
+Book listings can be stored in Supabase and shared across browsers; the shared
+catalog feeds both the library and search results. The frontend uses the
+publishable key in `supabase-config.js`, which is public by design. Never put a
+secret/service-role key in the frontend. Run `supabase_schema.sql` in the
+Supabase SQL Editor to create the catalog table and its read/insert RLS
+policies. Run the current `supabase_schema.sql` in the Supabase SQL Editor to
+create the shared catalog and transaction-status tables; rerun it after schema
+updates. Catalog and transaction status are public and can be read or changed
+anonymously, so this is suitable for the current prototype, not a production
+marketplace. When Supabase is not configured, local development can use the
+Python API in SQLite instead. Transaction status metadata syncs across browsers,
+but point top-ups, balances, detailed orders, chat, and wishlists remain
+browser-local in `localStorage`. Local demo accounts have separate IDs, but
+these IDs are not verified, do not authenticate real Google/Apple accounts, and
+are not shared between browsers or devices.
 Each local demo account receives 150 starter points once, after its first
 successful book listing. Listing points use the backend rules-based estimator:
 ISBN validity, catalog fields, condition, evidence, and previous circulations
@@ -40,9 +49,15 @@ a convenience-store provider. The prototype starts the 72-hour seller-point
 hold after its simulated delivery-completion event, and only records
 circulation rewards after settlement.
 
-Production transactions require a backend, a real payment/top-up provider, and
-authenticated, verified C2C fulfillment webhooks. Client-side controls must
-never be treated as payment or pickup proof.
+The shared transaction table stores book title/author, demo buyer/seller IDs,
+trade mode, estimated points, delivery method, and status; it does not store a
+specific store/box address or chat/payment details. Because demo IDs and
+anonymous status updates are not authenticated, users can impersonate accounts
+or alter transaction status. Do not use this prototype state as proof of
+ownership, payment, pickup, or fulfillment. Production transactions require a
+backend, real user authentication, a payment/top-up provider, and authenticated,
+verified C2C fulfillment webhooks. Client-side controls must never be treated
+as payment or pickup proof.
 
 ## Private platform analytics (prototype)
 
@@ -66,14 +81,15 @@ the app behind HTTPS and a maintained production web server, set
 access to the service. GitHub Pages alone cannot run this backend or protect
 the dashboard; serve the frontend and `/api` from the same trusted origin.
 
-The current sign-in, books, orders, and fulfillment remain browser-local
-simulations. Analytics events are anonymous, client-reported prototype
-signals—not verified customers, authoritative inventory, or real transaction
-records. The ESG panel uses an illustrative 1.02 kg CO₂e per simulated settled
-circulation, not a measured or independently verified impact. Do not use these
-figures as production business or sustainability claims. The CSV export
-contains event-level anonymous references and book/trade fields; protect and
-handle downloaded files as private data.
+The current sign-in, account balances, detailed orders, and fulfillment remain
+browser-local simulations; only listing records and basic transaction status
+are shared through Supabase. Analytics events are anonymous, client-reported
+prototype signals—not verified customers, authoritative inventory, or real
+transaction records. The ESG panel uses an illustrative 1.02 kg CO₂e per
+simulated settled circulation, not a measured or independently verified
+impact. Do not use these figures as production business or sustainability
+claims. The CSV export contains event-level anonymous references and
+book/trade fields; protect and handle downloaded files as private data.
 
 ## External bookstore links
 

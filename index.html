@@ -21,6 +21,7 @@
 		.auth-modal,.flow-modal{display:none;position:fixed;inset:0;z-index:20;background:#10251ab8;align-items:center;justify-content:center;padding:18px}.auth-modal.show,.flow-modal.show{display:flex}.auth-panel,.flow-panel{width:min(100%,480px);max-height:calc(100vh - 36px);overflow:auto;background:#fff;border-radius:20px;padding:20px;box-shadow:0 20px 60px #10251a40}.auth-panel h2,.flow-panel h2{margin:0;font-size:20px}.auth-panel>.subtle,.flow-panel>.subtle{margin-bottom:14px}.auth-provider{width:100%;margin-top:8px;border:1px solid #dce5df;border-radius:11px;background:#fff;color:var(--ink);padding:11px 12px;font-weight:700}.auth-provider.google{border-color:#b8c7bf}.auth-provider.apple{background:#17231e;color:#fff;border-color:#17231e}.auth-divider{text-align:center;color:var(--muted);font-size:11px;margin:14px 0 8px}.phone-auth{display:grid;gap:8px}.phone-row{display:grid;grid-template-columns:92px 1fr;gap:8px}.auth-actions,.trade-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.auth-actions button,.trade-actions button{flex:1}.auth-close{border:0;background:transparent;color:var(--muted);font-size:22px;line-height:1;padding:3px}.guest-account{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}.guest-account .stats{min-width:0}.inline-label{display:flex;align-items:center;gap:8px;font-size:12px}.inline-label input{width:auto}.inline-label[hidden]{display:none}.prototype-note{border:1px dashed #e2c76f;border-radius:12px;background:#fff9e8;padding:11px;color:#705914;font-size:11px;line-height:1.65}.wishlist-item,.order-card,.public-wishlist{border:1px solid var(--line);border-radius:14px;padding:12px;background:#fff}.wishlist-list,.order-list,.public-wishlist-list,.match-list{display:grid;gap:10px;margin-top:12px}.wishlist-item .between,.order-card .between{gap:8px}.order-actions{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}.order-actions .btn{flex:1}.chat-messages{display:grid;gap:8px;max-height:230px;overflow:auto;margin:14px 0}.chat-message{background:#f2f7f3;border-radius:12px;padding:9px 11px;font-size:12px;line-height:1.5}.chat-message.mine{background:var(--mint);margin-left:20px}.wallet-balance{font-size:26px;font-weight:750;color:var(--green)}.badge.warning{background:#fff3d3;color:#705914}.book-card-actions{display:grid;gap:6px;flex:none}.book-card-actions .btn{white-space:nowrap;padding:7px 8px}
 		.trade-choice-list{display:grid;gap:9px;margin:14px 0}.trade-choice{display:flex;align-items:flex-start;gap:10px;border:1px solid var(--line);border-radius:13px;padding:12px;background:#fff}.trade-choice:has(input:checked){border-color:var(--green);background:var(--mint)}.trade-choice input{margin-top:3px;accent-color:var(--green)}.trade-choice strong,.trade-choice small{display:block}.trade-choice strong{font-size:13px}.trade-choice small{margin-top:4px;color:var(--muted);font-size:11px;line-height:1.5}.transaction-summary{display:grid;gap:5px;border:1px solid var(--line);border-radius:14px;padding:13px;background:#f8fbf9}.transaction-actions{display:flex;gap:8px;margin-top:14px}.transaction-actions .btn{flex:1}
 		.admin-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px}.admin-metric,.admin-breakdown{border:1px solid var(--line);border-radius:14px;padding:13px;background:#fff}.admin-metric small{display:block;color:var(--muted);font-size:11px}.admin-metric strong{display:block;color:var(--green);font-size:22px;margin-top:5px}.admin-breakdowns{display:grid;gap:10px;margin-top:14px}.admin-breakdown h3{margin:0 0 8px;font-size:14px}.admin-breakdown-row{display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px solid var(--line);font-size:12px}.admin-breakdown-row:last-child{border-bottom:0}.admin-toolbar{display:flex;align-items:center;gap:8px;margin-top:12px}.admin-toolbar select{flex:1;min-width:0;border:1px solid #dce5df;border-radius:10px;padding:9px;background:#fff}.admin-table-wrap{overflow:auto;margin-top:14px}.admin-table{width:100%;border-collapse:collapse;font-size:11px}.admin-table th,.admin-table td{padding:8px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+		.library-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:14px 0}.library-tabs button{font-size:11px;padding:9px 5px}.library-tabs button.active{background:var(--green);color:#fff}
 		.brand-logo{width:64px;height:64px}
 	</style>
 </head>
@@ -198,6 +199,18 @@
 				<div class="notice"><strong>🌿 循環閱讀小知識</strong><br>僅在交付完成、爭議期結束且交易未退款後，才計入流轉與 1.02 kg CO₂e 原型估算；實際效益需依完整生命週期資料估算。</div>
 				<div id="history-list" class="history-list"></div>
 			</section>
+			<section id="section-library" class="section">
+				<h2 class="section-title">自己的書庫</h2>
+				<p class="subtle">整理你上架、售出與買進的書籍。</p>
+				<div class="library-tabs" role="tablist" aria-label="自己的書庫分類">
+					<button class="btn btn-light active" type="button" role="tab" aria-selected="true" data-library-view="listed" onclick="setLibraryView('listed')">我的上架</button>
+					<button class="btn btn-light" type="button" role="tab" aria-selected="false" data-library-view="sold" onclick="setLibraryView('sold')">已賣出</button>
+					<button class="btn btn-light" type="button" role="tab" aria-selected="false" data-library-view="bought" onclick="setLibraryView('bought')">已買進</button>
+				</div>
+				<p id="library-status" class="subtle" role="status" aria-live="polite"></p>
+				<div id="my-library-list" class="book-list"></div>
+				<p class="book-meta" style="margin-top:14px">共享交易狀態為示意資料，尚未驗證真實身分或付款／交付。</p>
+			</section>
 			<section id="section-admin" class="section">
 				<div class="between"><h2 class="section-title">平台數據管理</h2><button id="admin-logout" class="btn btn-small" type="button" onclick="adminLogout()" hidden>管理員登出</button></div>
 				<p class="subtle">顧客、書籍、交易及 ESG 統計；僅由伺服器驗證後提供。</p>
@@ -229,6 +242,7 @@
 			<div class="feature-drawer-head"><h2 id="feature-drawer-title">其他功能</h2><button class="auth-close" type="button" aria-label="關閉功能選單" onclick="closeFeatureMenu()">×</button></div>
 			<div class="feature-drawer-list">
 				<button type="button" onclick="switchTab('wishlist')" data-tab="wishlist"><span class="icon">♡</span>願望清單</button>
+				<button type="button" onclick="switchTab('library')" data-tab="library"><span class="icon">▤</span>自己的書庫</button>
 				<button type="button" onclick="switchTab('wallet')" data-tab="wallet"><span class="icon">◉</span>環點錢包與訂單</button>
 				<button type="button" onclick="switchTab('profile')" data-tab="profile"><span class="icon">♧</span>綠色履歷</button>
 				<button type="button" onclick="switchTab('retailer')" data-tab="retailer"><span class="icon">↗</span>外部書商</button>
@@ -281,6 +295,7 @@
 		</div>
 	</div>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+	<script src="supabase-config.js"></script>
 	<script>
 		let userPoints=0,userCarbon=0,userCycles=0,userCoupons=0;
 		const MAX_BOOK_CYCLES=8;
@@ -298,7 +313,9 @@
 			{userId:'demo-reader-2',name:'書友小林',items:[{title:'原子習慣',author:'詹姆斯．克利爾',isbn:'9789571383125'}]},
 		];
 		let myWishlist=[],orders=[],topupHistory=[],sellerLedger=[],sellerBalances={},listingEvents=[],cycleCountsByIsbn={},wishlistIsPublic=true;
-		let currentUser=null,demoAccounts=[],isPublishingBook=false,sharedBooksSyncError=false,sharedBooksRefreshPromise=null;
+		let currentUser=null,demoAccounts=[],isPublishingBook=false,isSubmittingTrade=false,sharedBooksSyncError=false,sharedBooksRefreshPromise=null;
+		let sharedTransactions=[],libraryView='listed';
+		const sharedTransactionSyncs=new Map();
 		let activeTradeBookId=null,activeTradeMode='swap',activeConversationOrderId=null,transactionBookboxLocations=[],transactionStationsError=null,transactionRenderKey='';
 		let transactionStationsLoaded=false;
 		let history=[{title:'綠色帳戶建立',detail:'BookLoop 原型體驗',date:'帳戶紀錄',points:'已加入'}];
@@ -307,32 +324,242 @@
 			return items.length?items.map((b,i)=>`<article class="book-card"><div class="cover ${b.tone||['','blue','orange'][i%3]}">📖</div><div class="book-info"><h3 class="book-title">${safe(b.title)}</h3><div class="book-meta">${safe(b.author)}${b.publisher?'／'+safe(b.publisher):''}<br>已流轉 ${b.cycles} 次 · ${conditionLabels[b.condition]||'書況未標示'} · ${regionLabels[b.region]||'區域未標示'} · ${languageLabels[b.language]||'語言未標示'}${b.bookLocation?`<br>書籍位置：${safe(b.bookLocation)}`:''}<br>賣方：${safe(b.sellerName||'書友')}</div>${b.media?.length?`<div class="book-media">${b.media.map(m=>m.kind==='video'?`<video src="${safe(m.url)}" controls playsinline aria-label="${safe(m.name)}"></video>`:`<img src="${safe(m.url)}" alt="${safe(m.name)}">`).join('')}</div>`:''}<div class="book-bottom"><span class="location">⌖ ${safe(b.location)}</span><span class="points">${b.points} 環點</span></div></div><div class="book-card-actions"><button class="btn btn-small" type="button" data-trade-book-id="${safe(b.id)}">交易方式</button><button class="btn btn-light btn-small" type="button" onclick="addBookToWishlist(${Number(b.id)})">♡ 想要</button></div></article>`).join(''):`<div class="empty">${emptyMessage}</div>`;
 		}
 		function renderBooks(){
-			const availableBooks=books.filter(book=>!book.reservedBy);
+			const availableBooks=books.filter(isBookAvailable);
 			document.getElementById('book-list').innerHTML=availableBooks.length?renderBookCards(availableBooks,'目前沒有可借閱的書籍，歡迎上架分享！'):'<div class="empty">目前沒有可借閱的書籍，歡迎上架分享！</div>';
 			filterBooks();
+		}
+		const supabaseConfig=window.BOOKLOOP_SUPABASE_CONFIG||{};
+		const supabaseUrl=typeof supabaseConfig.url==='string'?supabaseConfig.url.replace(/\/+$/,''):'';
+		const supabasePublishableKey=typeof supabaseConfig.publishableKey==='string'?supabaseConfig.publishableKey:'';
+		function supabaseBookFromRow(row){
+			const id=Number(row.id);
+			if(!Number.isSafeInteger(id))throw new Error('invalid_supabase_book_id');
+			return {
+				id,createdAt:row.created_at,isbn:row.isbn||'',title:row.title,author:row.author,
+				publisher:row.publisher||'',points:row.points,cycles:row.cycles||0,condition:row.condition||'',
+				conditionNotes:row.condition_notes||'',conditionChecks:row.condition_checks||{},
+				location:row.location,bookLocation:row.book_location||'',region:row.region||'',
+				language:row.language||'',sellerId:row.seller_id,sellerName:row.seller_name||'書友',
+				listingBonusPoints:row.listing_bonus_points||0,riskFlags:row.risk_flags||[],media:[],tone:'green',
+			};
+		}
+		function supabaseTransactionFromRow(row){
+			const bookId=Number(row.book_id);
+			if(!Number.isSafeInteger(bookId))throw new Error('invalid_supabase_transaction_book_id');
+			return {
+				id:row.order_id,bookId,buyerId:row.buyer_id,sellerId:row.seller_id,
+				title:row.book_title,author:row.book_author,isbn:row.isbn||'',mode:row.mode,
+				amountPoints:row.amount_points||0,deliveryMethod:row.delivery_method,
+				status:row.status,createdAt:Date.parse(row.created_at),
+				updatedAt:Date.parse(row.updated_at),settledAt:row.settled_at?Date.parse(row.settled_at):null,
+			};
+		}
+		function supabaseRequestHeaders(extra={}){
+			return {apikey:supabasePublishableKey,...extra};
+		}
+		async function fetchSharedBooks(){
+			if(supabaseUrl&&supabasePublishableKey){
+				const columns='id,created_at,isbn,title,author,publisher,points,cycles,condition,condition_notes,condition_checks,location,book_location,region,language,seller_id,seller_name,listing_bonus_points,risk_flags';
+				const url=`${supabaseUrl}/rest/v1/shared_books?select=${columns}&order=created_at.desc`;
+				const response=await fetch(url,{headers:supabaseRequestHeaders(),cache:'no-store'});
+				if(!response.ok)throw new Error(`supabase_shared_books_http_${response.status}`);
+				const rows=await response.json();
+				if(!Array.isArray(rows))throw new Error('invalid_supabase_shared_books_response');
+				return rows.map(supabaseBookFromRow);
+			}
+			const response=await fetch('/api/books',{cache:'no-store'});
+			if(!response.ok)throw new Error(`shared_books_http_${response.status}`);
+			const data=await response.json();
+			if(!Array.isArray(data.books))throw new Error('invalid_shared_books_response');
+			return data.books;
+		}
+		async function fetchSharedTransactions(){
+			if(!supabaseUrl||!supabasePublishableKey)return [];
+			const columns='order_id,book_id,buyer_id,seller_id,book_title,book_author,isbn,mode,amount_points,delivery_method,status,created_at,updated_at,settled_at';
+			const response=await fetch(`${supabaseUrl}/rest/v1/shared_book_transactions?select=${columns}&order=created_at.desc`,{
+				headers:supabaseRequestHeaders(),cache:'no-store',
+			});
+			if(!response.ok)throw new Error(`supabase_transactions_http_${response.status}`);
+			const rows=await response.json();
+			if(!Array.isArray(rows))throw new Error('invalid_supabase_transactions_response');
+			return rows.map(supabaseTransactionFromRow);
+		}
+		async function createSharedTransaction(order){
+			if(!supabaseUrl||!supabasePublishableKey)return null;
+			const row={
+				order_id:order.id,book_id:order.bookId,buyer_id:order.buyerId,seller_id:order.sellerId,
+				book_title:order.title,book_author:order.author,isbn:order.isbn,mode:order.mode,
+				amount_points:order.amountPoints,delivery_method:order.deliveryMethod,status:order.status,
+			};
+			const response=await fetch(`${supabaseUrl}/rest/v1/shared_book_transactions`,{
+				method:'POST',
+				headers:supabaseRequestHeaders({'Content-Type':'application/json',Prefer:'return=representation'}),
+				body:JSON.stringify(row),
+			});
+			const data=await response.json();
+			if(!response.ok)throw new Error(data.message||data.error||`supabase_transaction_http_${response.status}`);
+			if(!Array.isArray(data)||!data[0])throw new Error('invalid_supabase_transaction_response');
+			return supabaseTransactionFromRow(data[0]);
+		}
+		async function patchSharedTransaction(order){
+			if(!supabaseUrl||!supabasePublishableKey||!order.sharedTransactionId)return;
+			const response=await fetch(`${supabaseUrl}/rest/v1/shared_book_transactions?order_id=eq.${encodeURIComponent(order.sharedTransactionId)}`,{
+				method:'PATCH',
+				headers:supabaseRequestHeaders({'Content-Type':'application/json',Prefer:'return=representation'}),
+				body:JSON.stringify({
+					status:order.status,
+					updated_at:new Date().toISOString(),
+					settled_at:order.status==='settled'?new Date(order.settledAt||Date.now()).toISOString():null,
+				}),
+			});
+			const data=await response.json();
+			if(!response.ok)throw new Error(data.message||data.error||`supabase_transaction_update_http_${response.status}`);
+			if(!Array.isArray(data)||data.length!==1)throw new Error('shared_transaction_not_updated');
+			const updated=supabaseTransactionFromRow(data[0]);
+			sharedTransactions=sharedTransactions.map(transaction=>transaction.id===updated.id?updated:transaction);
+			renderBooks();
+			renderMyLibrary();
+		}
+		function queueSharedTransactionSync(order){
+			if(!order.sharedTransactionId||!supabaseUrl||!supabasePublishableKey)return;
+			const previous=sharedTransactionSyncs.get(order.sharedTransactionId)||Promise.resolve();
+			const current=previous.catch(()=>{}).then(()=>patchSharedTransaction(order));
+			sharedTransactionSyncs.set(order.sharedTransactionId,current);
+			current.catch(error=>{
+				console.error('Shared transaction status could not be synchronized',error);
+				toast('交易狀態尚未同步，請確認 Supabase 設定後重試。');
+			}).finally(()=>{
+				if(sharedTransactionSyncs.get(order.sharedTransactionId)===current)sharedTransactionSyncs.delete(order.sharedTransactionId);
+			});
+		}
+		const activeSharedTransactionStatuses=new Set(['negotiating','awaiting_payment','awaiting_shipment','shipped','cooldown','disputed','risk_review']);
+		function transactionForBook(bookId){
+			return sharedTransactions.find(transaction=>String(transaction.bookId)===String(bookId)&&activeSharedTransactionStatuses.has(transaction.status))
+				||sharedTransactions.find(transaction=>String(transaction.bookId)===String(bookId)&&transaction.status==='settled')
+				||null;
+		}
+		function isBookAvailable(book){
+			const transaction=transactionForBook(book.id);
+			return !book.reservedBy&&!transaction;
+		}
+		function applySharedTransactions(transactions){
+			sharedTransactions=transactions;
+			let localOrdersChanged=false;
+			for(const transaction of sharedTransactions){
+				if(sharedTransactionSyncs.has(transaction.id))continue;
+				const localOrder=orders.find(order=>order.id===transaction.id);
+				if(localOrder&&(localOrder.status!==transaction.status||localOrder.settledAt!==(transaction.settledAt||null))){
+					localOrder.status=transaction.status;
+					localOrder.settledAt=transaction.settledAt||null;
+					localOrdersChanged=true;
+				}
+			}
+			if(localOrdersChanged)persistPrototypeState();
+		}
+		function localTransactionRecord(order){
+			return {
+				id:order.sharedTransactionId||order.id,bookId:Number(order.bookId),buyerId:order.buyerId,sellerId:order.sellerId,
+				title:order.title,author:'',isbn:order.isbn||'',mode:order.mode,amountPoints:order.amountPoints||0,
+				deliveryMethod:order.deliveryMethod,status:order.status,createdAt:order.createdAt,settledAt:order.settledAt||null,
+			};
+		}
+		function libraryTransactionRecords(){
+			const transactions=new Map(sharedTransactions.map(transaction=>[transaction.id,transaction]));
+			for(const order of orders){
+				const record=localTransactionRecord(order);
+				if(!transactions.has(record.id))transactions.set(record.id,record);
+			}
+			return [...transactions.values()];
+		}
+		function renderLibraryBook(book,statusLabel){
+			return `<article class="book-card"><div class="cover ${safe(book.tone||'')}">📖</div><div class="book-info"><h3 class="book-title">${safe(book.title)}</h3><div class="book-meta">${safe(book.author)}${book.publisher?'／'+safe(book.publisher):''}<br>${safe(statusLabel)} · ${book.cycles||0} 次流轉</div><div class="book-bottom"><span class="location">${safe(book.location||'')}</span><span class="points">${Number(book.points)||0} 環點</span></div></div></article>`;
+		}
+		function renderLibraryTransaction(transaction,role){
+			const status=transaction.status==='settled'?(role==='seller'?'已售出':'已買進'):(orderStatusLabels[transaction.status]||'交易處理中');
+			return `<article class="history-card"><div class="between"><strong>${safe(transaction.title)}</strong><span class="badge">${safe(status)}</span></div><p>${role==='seller'?'賣出':'買進'} · ${{swap:'書換書',points:'點數換書',money:'錢換書'}[transaction.mode]||'書籍交易'}</p><span class="book-meta">${transaction.settledAt?new Date(transaction.settledAt).toLocaleDateString('zh-TW'):new Date(transaction.createdAt||Date.now()).toLocaleDateString('zh-TW')}</span></article>`;
+		}
+		function setLibraryView(view){
+			if(!['listed','sold','bought'].includes(view))return;
+			libraryView=view;
+			document.querySelectorAll('[data-library-view]').forEach(button=>{
+				const active=button.dataset.libraryView===view;
+				button.classList.toggle('active',active);
+				button.setAttribute('aria-selected',String(active));
+			});
+			renderMyLibrary();
+		}
+		function renderMyLibrary(){
+			const list=document.getElementById('my-library-list');
+			if(!list)return;
+			if(!currentUser){
+				list.innerHTML='<div class="empty">登入後即可查看自己的書庫。</div>';
+				return;
+			}
+			const accountId=currentAccountId(),transactions=libraryTransactionRecords();
+			let items=[];
+			if(libraryView==='listed'){
+				items=books.filter(book=>book.sellerId===accountId&&!transactions.some(transaction=>String(transaction.bookId)===String(book.id)&&transaction.status==='settled'))
+					.map(book=>({html:renderLibraryBook(book,transactionForBook(book.id)?'交易進行中':'上架中'),createdAt:book.createdAt||0}));
+			}else{
+				const role=libraryView==='sold'?'seller':'buyer';
+				const transactionsForView=transactions.filter(transaction=>(role==='seller'?transaction.sellerId:transaction.buyerId)===accountId&&transaction.status==='settled');
+				items=transactionsForView.map(transaction=>({html:renderLibraryTransaction(transaction,role),createdAt:transaction.settledAt||transaction.createdAt||0}));
+			}
+			items.sort((first,second)=>second.createdAt-first.createdAt);
+			list.innerHTML=items.length?items.map(item=>item.html).join(''):`<div class="empty">${libraryView==='listed'?'你目前沒有上架中的書。':libraryView==='sold'?'目前沒有已賣出的書。':'目前沒有已買進的書。'}</div>`;
+		}
+		async function createSharedBook(listing){
+			if(supabaseUrl&&supabasePublishableKey){
+				const row={
+					isbn:listing.isbn,title:listing.title,author:listing.author,publisher:listing.publisher,
+					points:listing.points,cycles:listing.cycles,condition:listing.condition||'',
+					condition_notes:listing.conditionNotes,condition_checks:listing.conditionChecks,
+					location:listing.location,book_location:listing.bookLocation,region:listing.region||'',
+					language:listing.language||'',seller_id:listing.sellerId,seller_name:listing.sellerName,
+					listing_bonus_points:listing.listingBonusPoints,risk_flags:listing.riskFlags,
+				};
+				const response=await fetch(`${supabaseUrl}/rest/v1/shared_books`,{
+					method:'POST',
+					headers:supabaseRequestHeaders({'Content-Type':'application/json',Prefer:'return=representation'}),
+					body:JSON.stringify(row),
+				});
+				const data=await response.json();
+				if(!response.ok)throw new Error(data.message||data.error||`supabase_shared_book_http_${response.status}`);
+				if(!Array.isArray(data)||!data[0])throw new Error('invalid_supabase_shared_book_response');
+				return supabaseBookFromRow(data[0]);
+			}
+			const response=await fetch('/api/books',{
+				method:'POST',
+				headers:{'Content-Type':'application/json'},
+				body:JSON.stringify(listing),
+			});
+			const data=await response.json();
+			if(!response.ok)throw new Error(data.error||`shared_book_http_${response.status}`);
+			if(!data.book||!Number.isSafeInteger(data.book.id))throw new Error('invalid_shared_book_response');
+			return data.book;
 		}
 		function refreshSharedBooks(){
 			if(sharedBooksRefreshPromise)return sharedBooksRefreshPromise;
 			sharedBooksRefreshPromise=(async()=>{
 				try{
-					const response=await fetch('/api/books',{cache:'no-store'});
-					if(!response.ok)throw new Error(`shared_books_http_${response.status}`);
-					const data=await response.json();
-					if(!Array.isArray(data.books))throw new Error('invalid_shared_books_response');
+					const [sharedBooks,transactions]=await Promise.all([fetchSharedBooks(),fetchSharedTransactions()]);
+					applySharedTransactions(transactions);
 					const knownIds=new Set(books.map(book=>String(book.id)));
-					const newBooks=data.books.filter(book=>book&&book.id!==undefined&&!knownIds.has(String(book.id))).map(book=>({...book,media:[]}));
+					const newBooks=sharedBooks.filter(book=>book&&book.id!==undefined&&!knownIds.has(String(book.id))).map(book=>({...book,media:[]}));
 					sharedBooksSyncError=false;
 					if(newBooks.length){
 						books=[...newBooks,...books];
 						persistPrototypeState();
-						renderBooks();
-						renderWishlist();
-					}else{
-						filterBooks();
 					}
+					renderBooks();
+					renderWishlist();
+					renderMyLibrary();
+					renderWallet();
+					document.getElementById('library-status').textContent='';
 				}catch(error){
 					sharedBooksSyncError=true;
 					console.error('Shared books could not be refreshed',error);
+					if(supabaseUrl&&supabasePublishableKey)document.getElementById('library-status').textContent='無法同步共享書籍或交易狀態，請確認已執行最新的 Supabase SQL。';
 					filterBooks();
 				}finally{
 					sharedBooksRefreshPromise=null;
@@ -347,14 +574,17 @@
 			const condition=document.getElementById('search-condition').value;
 			const language=document.getElementById('search-language').value;
 			const filtered=books.filter(book=>{
-				if(book.reservedBy)return false;
+				if(!isBookAvailable(book))return false;
 				const matchesQuery=!query||[book.title,book.author,book.publisher,book.isbn].some(value=>String(value||'').toLowerCase().includes(query));
 				const matchesRegion=!region||(region==='unknown'?!book.region:book.region===region);
 				const matchesCondition=!condition||(condition==='unknown'?!book.condition:book.condition===condition);
 				const matchesLanguage=!language||(language==='unknown'?!book.language:book.language===language);
 				return matchesQuery&&matchesRegion&&matchesCondition&&matchesLanguage;
 			});
-			document.getElementById('search-result-count').textContent=`找到 ${filtered.length} 本書${sharedBooksSyncError?'；共享書庫同步失敗，請確認伺服器已部署並重啟，且雙方連線至同一服務。':''}`;
+			const syncMessage=sharedBooksSyncError
+				?(supabaseUrl&&supabasePublishableKey?'；Supabase 同步失敗，請確認已執行資料表 SQL，且 RLS 允許讀取。':'；共享書庫同步失敗，請確認伺服器已部署並重啟，且雙方連線至同一服務。')
+				:'';
+			document.getElementById('search-result-count').textContent=`找到 ${filtered.length} 本書${syncMessage}`;
 			document.getElementById('search-results').innerHTML=renderBookCards(filtered,'沒有符合條件的書籍，試試調整篩選條件。');
 			document.getElementById('search-retailer-prompt').hidden=filtered.length>0||!queryInput;
 		}
@@ -482,7 +712,7 @@
 			document.getElementById('public-wishlists').innerHTML=publicProfiles.map(profile=>`<article class="public-wishlist"><strong>${safe(profile.name)}的公開願望</strong>${profile.items.map(item=>`<div class="book-meta" style="margin-top:7px">${safe(item.title)}${item.author?` · ${safe(item.author)}`:''}</div>`).join('')}</article>`).join('');
 			const wishes=[...samplePublicWishlists.flatMap(profile=>profile.items),...(wishlistIsPublic?myWishlist:[])];
 			const matches=new Map();
-			wishes.forEach(wish=>books.filter(book=>!book.reservedBy).forEach(book=>{const score=matchScore(wish,book);if(score>0&&(!matches.has(book.id)||matches.get(book.id).score<score))matches.set(book.id,{book,score,wish})}));
+			wishes.forEach(wish=>books.filter(isBookAvailable).forEach(book=>{const score=matchScore(wish,book);if(score>0&&(!matches.has(book.id)||matches.get(book.id).score<score))matches.set(book.id,{book,score,wish})}));
 			const sorted=[...matches.values()].sort((a,b)=>b.score-a.score);
 			document.getElementById('wishlist-matches').innerHTML=sorted.length?sorted.map(({book,score,wish})=>`<article class="wishlist-item"><div class="between"><strong>${score>=10?'高度':'可能'}符合：${safe(book.title)}</strong><span class="badge">${safe(wish.title)}</span></div><div class="book-meta">${safe(book.sellerName||'書友')}的在架書</div><div class="trade-actions"><button class="btn btn-small" type="button" data-trade-book-id="${safe(book.id)}">洽談交易</button></div></article>`).join(''):'<div class="empty">目前沒有符合公開願望的在架書籍。</div>';
 		}
@@ -561,7 +791,7 @@
 		function openTradeOptions(bookId){
 			const book=books.find(item=>String(item.id)===String(bookId));
 			if(!book){toast('找不到這本書，請重新整理頁面後再試');return}
-			if(book.reservedBy){toast('這本書已有人洽談，請重新整理書庫');return}
+			if(!isBookAvailable(book)){toast('這本書已有人洽談或完成交易，請重新整理書庫');return}
 			if(book.cycles>=MAX_BOOK_CYCLES){toast(`此書已達 ${MAX_BOOK_CYCLES} 次流轉上限`);return}
 			activeTradeBookId=book.id;transactionRenderKey='';document.getElementById('trade-book-title').textContent=`《${book.title}》 · ${book.points} 環點`;
 			activeTradeMode='swap';document.querySelector('input[name="trade-mode"][value="swap"]').checked=true;
@@ -571,14 +801,14 @@
 		function hideTradeModal(){const modal=document.getElementById('trade-modal');modal.classList.remove('show');modal.style.display='none';modal.setAttribute('aria-hidden','true')}
 		function closeTradeModal(){hideTradeModal();activeTradeBookId=null;transactionRenderKey=''}
 		function continueToTransaction(){
-			const book=books.find(item=>item.id===activeTradeBookId);if(!book||book.reservedBy)return;
+			const book=books.find(item=>item.id===activeTradeBookId);if(!book||!isBookAvailable(book))return;
 			activeTradeMode=document.querySelector('input[name="trade-mode"]:checked')?.value||'swap';
 			if(!requireAuth()){hideTradeModal();return}
 			hideTradeModal();
 			switchTab('transaction');
 		}
 		function backToTradeOptions(){
-			const book=books.find(item=>item.id===activeTradeBookId);if(!book||book.reservedBy){cancelTransaction();return}
+			const book=books.find(item=>item.id===activeTradeBookId);if(!book||!isBookAvailable(book)){cancelTransaction();return}
 			document.getElementById('trade-book-title').textContent=`《${book.title}》 · ${book.points} 環點`;
 			document.querySelector(`input[name="trade-mode"][value="${activeTradeMode}"]`).checked=true;
 			showTradeModal();
@@ -586,7 +816,7 @@
 		}
 		function cancelTransaction(){closeTradeModal();switchTab('market')}
 		function renderTransactionPage(){
-			const book=books.find(item=>item.id===activeTradeBookId);if(!book||book.reservedBy){switchTab('market');return}
+			const book=books.find(item=>item.id===activeTradeBookId);if(!book||!isBookAvailable(book)){switchTab('market');return}
 			const renderKey=`${book.id}:${activeTradeMode}`;
 			if(transactionRenderKey===renderKey)return;
 			transactionRenderKey=renderKey;
@@ -652,14 +882,16 @@
 			if(book.riskFlags?.length)flags.push(...book.riskFlags);
 			return flags;
 		}
-		function submitTrade(){
-			const book=books.find(item=>item.id===activeTradeBookId);if(!book||book.reservedBy)return;
+		async function submitTrade(){
+			if(isSubmittingTrade)return;
+			const book=books.find(item=>item.id===activeTradeBookId);if(!book||!isBookAvailable(book))return;
 			const mode=activeTradeMode,buyerId=currentAccountId(),sellerId=book.sellerId||'sample-seller';
 			if(buyerId===sellerId){toast('不能向自己購買書籍');return}
 			const delivery=transactionDelivery();
 			if(!delivery){toast(document.getElementById('transaction-delivery-method').value==='bookbox'?'請從站點清單選擇有效的智慧書箱站':'請輸入超商名稱與門市');return}
-			const id=`order-${Date.now()}-${orders.length}`,riskFlags=identifyRiskFlags(book,buyerId,sellerId);
-			const order={id,bookId:book.id,isbn:book.isbn||'',cycleKey:book.isbn||book.title.toLowerCase(),title:book.title,mode,buyerId,sellerId,sellerName:book.sellerName||'書友',amountPoints:mode==='points'?book.points:0,amountMoney:mode==='money'?book.points:0,status:mode==='swap'?'negotiating':mode==='money'?'awaiting_payment':'awaiting_shipment',createdAt:Date.now(),riskFlags,bonusPoints:mode==='points'&&!riskFlags.length?(book.listingBonusPoints||0):0,couponApplied:false,couponStatus:'none',offerTitle:'',meetingPlace:'',deliveryMethod:delivery.method,deliveryPlace:delivery.place,messages:[]};
+			const id=`order-${Date.now()}-${createAnalyticsId()}`,riskFlags=identifyRiskFlags(book,buyerId,sellerId);
+			const order={id,bookId:book.id,isbn:book.isbn||'',cycleKey:book.isbn||book.title.toLowerCase(),title:book.title,author:book.author,mode,buyerId,sellerId,sellerName:book.sellerName||'書友',amountPoints:mode==='points'?book.points:0,amountMoney:mode==='money'?book.points:0,status:mode==='swap'?'negotiating':mode==='money'?'awaiting_payment':'awaiting_shipment',createdAt:Date.now(),riskFlags,bonusPoints:mode==='points'&&!riskFlags.length?(book.listingBonusPoints||0):0,couponApplied:false,couponStatus:'none',offerTitle:'',meetingPlace:'',deliveryMethod:delivery.method,deliveryPlace:delivery.place,messages:[]};
+			let requestedCoupon=false;
 			if(mode==='swap'){
 				order.offerTitle=document.getElementById('transaction-offer-title').value.trim();
 				if(!order.offerTitle){toast('請填寫想交換的書籍');return}
@@ -667,17 +899,31 @@
 				order.messages.push({sender:'me',text:`我想用《${order.offerTitle}》交換，建議交付方式：${order.meetingPlace}`,date:new Date().toLocaleString('zh-TW')});
 			}else if(mode==='points'){
 				if(availablePoints()<book.points){toast(`環點不足，請先儲值 ${book.points-availablePoints()} 點`);closeTradeModal();switchTab('wallet');return}
-				const requestedCoupon=delivery.method==='store'&&document.getElementById('transaction-use-coupon').checked&&userCoupons-orders.filter(item=>item.couponStatus==='reserved').length>0;
+				requestedCoupon=delivery.method==='store'&&document.getElementById('transaction-use-coupon').checked&&userCoupons-orders.filter(item=>item.couponStatus==='reserved').length>0;
 				order.couponApplied=requestedCoupon&&!riskFlags.length;
 				order.couponStatus=order.couponApplied?'reserved':requestedCoupon?'void':'none';
-				order.walletAllocation=spendPoints(book.points);
 			}
+			isSubmittingTrade=true;
+			try{
+				const sharedTransaction=await createSharedTransaction(order);
+				if(supabaseUrl&&supabasePublishableKey&&!sharedTransaction)throw new Error('shared_transaction_not_created');
+				order.sharedTransactionId=sharedTransaction?.id||order.id;
+				if(sharedTransaction)sharedTransactions.unshift(sharedTransaction);
+			}catch(error){
+				console.error('Shared transaction could not be created',error);
+				toast('無法建立共享交易，請稍後重試；尚未扣除環點。');
+				return;
+			}finally{
+				isSubmittingTrade=false;
+			}
+			if(mode==='points')order.walletAllocation=spendPoints(book.points);
 			book.reservedBy=id;orders.unshift(order);trackPlatformEvent('trade_created',{isbn:order.isbn,mode:order.mode});closeTradeModal();persistPrototypeState();updateAccount();renderBooks();renderWishlist();renderWallet();switchTab('wallet');
+			renderMyLibrary();
 			toast(mode==='swap'?'已建立交易對話，待雙方確認':mode==='points'?'點數已託管，等待賣方交付（原型）':'已建立錢換書訂單，請在訂單中查看模擬付款流程');
 		}
-		function simulateMoneyPayment(id){const order=orders.find(item=>item.id===id);if(!order||order.status!=='awaiting_payment'||order.mode!=='money')return;order.paymentStatus='simulated_paid';order.status='awaiting_shipment';order.paidAt=Date.now();order.carrierEvent='原型付款模擬完成；沒有實際收款';persistPrototypeState();renderWallet();toast('原型付款流程完成，未實際扣款')}
-		function markOrderShipped(id){const order=orders.find(item=>item.id===id);if(!order||order.status!=='awaiting_shipment')return;order.status='shipped';order.shippedAt=Date.now();order.carrierEvent=order.deliveryMethod==='bookbox'?'賣方已投放至指定書箱（原型）':'賣方已寄出（原型）';persistPrototypeState();renderWallet()}
-		function confirmSwap(id){const order=orders.find(item=>item.id===id);if(!order||order.status!=='negotiating')return;order.status='awaiting_shipment';order.sellerConfirmedAt=Date.now();order.messages.push({sender:'seller',text:'我接受這項交換提議，請依約寄件。',date:new Date().toLocaleString('zh-TW')});persistPrototypeState();renderWallet();toast('雙方已確認（原型），可進入寄件流程')}
+		function simulateMoneyPayment(id){const order=orders.find(item=>item.id===id);if(!order||order.status!=='awaiting_payment'||order.mode!=='money')return;order.paymentStatus='simulated_paid';order.status='awaiting_shipment';order.paidAt=Date.now();order.carrierEvent='原型付款模擬完成；沒有實際收款';persistPrototypeState();queueSharedTransactionSync(order);renderWallet();toast('原型付款流程完成，未實際扣款')}
+		function markOrderShipped(id){const order=orders.find(item=>item.id===id);if(!order||order.status!=='awaiting_shipment')return;order.status='shipped';order.shippedAt=Date.now();order.carrierEvent=order.deliveryMethod==='bookbox'?'賣方已投放至指定書箱（原型）':'賣方已寄出（原型）';persistPrototypeState();queueSharedTransactionSync(order);renderWallet()}
+		function confirmSwap(id){const order=orders.find(item=>item.id===id);if(!order||order.status!=='negotiating')return;order.status='awaiting_shipment';order.sellerConfirmedAt=Date.now();order.messages.push({sender:'seller',text:'我接受這項交換提議，請依約寄件。',date:new Date().toLocaleString('zh-TW')});persistPrototypeState();queueSharedTransactionSync(order);renderWallet();toast('雙方已確認（原型），可進入寄件流程')}
 		function simulatePickupWebhook(id){
 			const order=orders.find(item=>item.id===id);if(!order||order.status!=='shipped')return;
 			order.status='cooldown';order.pickupAt=Date.now();order.settleAt=order.pickupAt+SETTLEMENT_HOURS*60*60*1000;order.carrierEvent=order.deliveryMethod==='bookbox'?'買家已從指定書箱領取（模擬完成交付）':order.mode==='points'?'C2C 到店＋買家已付款取件（模擬最終 Webhook）':order.mode==='money'?'超商取件（原型流程，付款非真實）':'C2C 到店完成取件（原型）';
@@ -686,42 +932,42 @@
 				else{order.couponStatus='redeemed';userCoupons=Math.max(0,userCoupons-1)}
 			}
 			order.bonusEligible=order.mode==='points'&&!order.riskFlags.length;
-			persistPrototypeState();renderWallet();updateAccount();toast(`${order.deliveryMethod==='bookbox'?'書箱交付':'取件'}流程已模擬完成；72 小時爭議期現在開始`);
+			persistPrototypeState();queueSharedTransactionSync(order);renderWallet();updateAccount();toast(`${order.deliveryMethod==='bookbox'?'書箱交付':'取件'}流程已模擬完成；72 小時爭議期現在開始`);
 		}
 		function releaseBookReservation(order){const book=books.find(item=>item.id===order.bookId);if(book&&book.reservedBy===order.id)delete book.reservedBy}
 		function cancelOrder(id){
 			const order=orders.find(item=>item.id===id);if(!order||!['negotiating','awaiting_payment','awaiting_shipment'].includes(order.status))return;
 			refundOrderPoints(order);
 			order.status='cancelled';order.couponStatus=order.couponApplied?'void':'none';order.carrierEvent=order.mode==='points'?'取消／賣方逾期未寄，點數已退回（原型）':'訂單已取消（原型流程）';releaseBookReservation(order);
-			persistPrototypeState();updateAccount();renderBooks();renderWishlist();renderWallet();
+			persistPrototypeState();queueSharedTransactionSync(order);updateAccount();renderBooks();renderWishlist();renderWallet();
 		}
 		function simulateReturn(id){
 			const order=orders.find(item=>item.id===id);if(!order||order.status!=='shipped')return;
 			refundOrderPoints(order);
 			order.status='cancelled';order.couponStatus=order.couponApplied?'void':'none';order.carrierEvent='未取退件／取消，補貼與加碼資格作廢（原型）';releaseBookReservation(order);
-			persistPrototypeState();updateAccount();renderBooks();renderWishlist();renderWallet();toast(order.mode==='points'?'模擬退件完成；買家點數已退回，優惠與加碼不予核銷':'模擬交付取消完成，沒有實際退款或收款');
+			persistPrototypeState();queueSharedTransactionSync(order);updateAccount();renderBooks();renderWishlist();renderWallet();toast(order.mode==='points'?'模擬退件完成；買家點數已退回，優惠與加碼不予核銷':'模擬交付取消完成，沒有實際退款或收款');
 		}
 		function raiseOrderDispute(id){
 			const order=orders.find(item=>item.id===id);if(!order||order.status!=='cooldown'||Date.now()>=order.settleAt)return;
-			order.status='disputed';order.disputeAt=Date.now();persistPrototypeState();renderWallet();toast('申訴已送出；託管點數暫停撥付（原型）');
+			order.status='disputed';order.disputeAt=Date.now();persistPrototypeState();queueSharedTransactionSync(order);renderWallet();toast('申訴已送出；託管點數暫停撥付（原型）');
 		}
 		function resolveDisputeRefund(id){
 			const order=orders.find(item=>item.id===id);if(!order||order.status!=='disputed')return;
 			refundOrderPoints(order);
 			order.status='refunded';order.refundedAt=Date.now();order.couponStatus=order.couponApplied?'void':'none';order.carrierEvent=order.mode==='points'?'書況申訴成立，託管點數全額退還（原型）':'書況申訴成立，進入原型取消流程（沒有實際收款）';releaseBookReservation(order);
-			persistPrototypeState();updateAccount();renderBooks();renderWishlist();renderWallet();toast(order.mode==='points'?'原型退款完成；買家點數已退回（本機未發生實際扣款）':'申訴已成立；此原型沒有實際收款或退款');
+			persistPrototypeState();queueSharedTransactionSync(order);updateAccount();renderBooks();renderWishlist();renderWallet();toast(order.mode==='points'?'原型退款完成；買家點數已退回（本機未發生實際扣款）':'申訴已成立；此原型沒有實際收款或退款');
 		}
 		function settleOrder(id){
 			const order=orders.find(item=>item.id===id);if(!order||order.status!=='cooldown')return false;
 			if(Date.now()<order.settleAt){toast('72 小時爭議期尚未結束，不能撥點');return false}
-			if(order.riskFlags?.length&&!order.riskReviewApproved){order.status='risk_review';persistPrototypeState();renderWallet();toast('偵測到風控訊號，點數暫停撥付並等待人工審查');return false}
+			if(order.riskFlags?.length&&!order.riskReviewApproved){order.status='risk_review';persistPrototypeState();queueSharedTransactionSync(order);renderWallet();toast('偵測到風控訊號，點數暫停撥付並等待人工審查');return false}
 			expirePromotionalPoints();
 			const bonus=order.bonusEligible?order.bonusPoints:0,credit=order.amountPoints+bonus;
 			order.status='settled';order.settledAt=Date.now();order.sellerPointsAwarded=credit;
 			if(credit){sellerBalances[order.sellerId]=(sellerBalances[order.sellerId]||0)+credit;sellerLedger.unshift({id:`sale-${order.id}`,sellerId:order.sellerId,sellerName:order.sellerName,title:order.title,amount:credit,bonus,promoRemaining:bonus,date:new Date().toLocaleString('zh-TW'),expiresAt:bonus?Date.now()+365*24*60*60*1000:null})}
 			order.carbonVerified=true;trackPlatformEvent('trade_settled',{isbn:order.isbn,mode:order.mode});userCarbon+=1.02;userCycles++;const book=books.find(item=>item.id===order.bookId),cycleKey=order.cycleKey||order.isbn||String(order.bookId);cycleCountsByIsbn[cycleKey]=Math.min(MAX_BOOK_CYCLES,Math.max(cycleCountsByIsbn[cycleKey]||0,(book?.cycles||0)+1));books=books.filter(item=>item.id!==order.bookId);
 			history.unshift({title:'完成共享流轉',detail:`《${order.title}》・${order.deliveryMethod==='bookbox'?'智慧書箱交付':'超商交付'}`,date:'剛剛',points:credit?`賣方 +${credit} 環點`:order.mode==='money'?`NT$${order.amountMoney} 原型流程`:'書籍交換完成'});
-			persistPrototypeState();updateAccount();renderBooks();renderWishlist();renderHistory();renderWallet();toast(order.mode==='points'?`交易完成，賣方已入帳 ${credit} 點（原型）`:order.mode==='money'?'交付流程完成；金額及付款皆為原型模擬，未實際收款':'書籍交換流程完成（原型）');return true;
+			persistPrototypeState();queueSharedTransactionSync(order);updateAccount();renderBooks();renderWishlist();renderHistory();renderWallet();renderMyLibrary();toast(order.mode==='points'?`交易完成，賣方已入帳 ${credit} 點（原型）`:order.mode==='money'?'交付流程完成；金額及付款皆為原型模擬，未實際收款':'書籍交換流程完成（原型）');return true;
 		}
 		function approveRiskReview(id){
 			const order=orders.find(item=>item.id===id);if(!order||order.status!=='risk_review')return;
@@ -731,7 +977,7 @@
 			const order=orders.find(item=>item.id===id);if(!order||order.status!=='risk_review')return;
 			refundOrderPoints(order);
 			order.status='refunded';order.refundedAt=Date.now();order.couponStatus=order.couponApplied?'void':'none';order.carrierEvent=order.mode==='points'?'風控審查不通過，點數資格剔除並退還買家（原型）':'風控審查不通過，交易已取消（原型）';releaseBookReservation(order);
-			persistPrototypeState();updateAccount();renderBooks();renderWishlist();renderWallet();toast(order.mode==='points'?'風控資格已剔除，買家點數已退回（原型）':'交易已取消；原型沒有實際收款或退款');
+			persistPrototypeState();queueSharedTransactionSync(order);updateAccount();renderBooks();renderWishlist();renderWallet();toast(order.mode==='points'?'風控資格已剔除，買家點數已退回（原型）':'交易已取消；原型沒有實際收款或退款');
 		}
 		function settleEligibleOrders(){
 			const eligible=orders.filter(order=>order.status==='cooldown'&&order.settleAt<=Date.now());
@@ -952,13 +1198,14 @@
 			document.body.style.overflow='';
 		}
 		function switchTab(name){
-			if((name==='scan'||name==='profile'||name==='wallet'||name==='transaction')&&!requireAuth()){closeFeatureMenu();return}
+			if((name==='scan'||name==='profile'||name==='wallet'||name==='transaction'||name==='library')&&!requireAuth()){closeFeatureMenu();return}
 			if(!document.getElementById(`section-${name}`))return;
 			document.querySelectorAll('.section').forEach(s=>s.classList.toggle('active',s.id==='section-'+name));
 			document.querySelectorAll('[data-tab]').forEach(button=>button.classList.toggle('active',button.dataset.tab===name));
 			closeFeatureMenu();
 			if(name==='wishlist')renderWishlist();
 			if(name==='wallet')renderWallet();
+			if(name==='library'){renderMyLibrary();refreshSharedBooks()}
 			if(name==='transaction')renderTransactionPage();
 			if(name==='admin')loadAdminAnalytics();
 			if(name==='search')refreshSharedBooks();
@@ -1288,11 +1535,7 @@
 			let sharedBook;
 			isPublishingBook=true;
 			try{
-				const response=await fetch('/api/books',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(listing)});
-				const data=await response.json();
-				if(!response.ok)throw new Error(data.error||`shared_book_http_${response.status}`);
-				if(!data.book||!Number.isSafeInteger(data.book.id))throw new Error('invalid_shared_book_response');
-				sharedBook={...data.book,media};
+				sharedBook={...await createSharedBook(listing),media};
 			}catch(error){
 				console.error('Shared book could not be published',error);
 				toast('目前無法同步共享書庫，請確認伺服器連線後再試。');
