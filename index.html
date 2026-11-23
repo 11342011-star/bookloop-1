@@ -667,7 +667,12 @@
 				toast(missing.length?`已帶入書名；資料庫未提供${missing.join('、')}，請手動輸入中文名稱`:'已自動帶入書名、中文／原始作者與出版社');
 			}catch(error){
 				console.error('ISBN lookup failed',error);
-				toast('書目資料庫連線失敗，請以 python3 server.py 啟動網站後重試');
+				const message=error instanceof TypeError
+					?'無法連到書目 API。請從 VS Code「連接埠」面板開啟 4173 的網址，並確認伺服器仍在執行。'
+					:error.message==='metadata_sources_unavailable'
+						?'書目來源暫時無法查詢，請稍後重試或手動輸入書目。'
+						:`書目查詢失敗：${error.message}`;
+				toast(message);
 			}
 		}
 		let pendingMedia=[],nextMediaId=1;
