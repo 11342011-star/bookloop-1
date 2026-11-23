@@ -299,7 +299,7 @@
 		let history=[{title:'綠色帳戶建立',detail:'BookLoop 原型體驗',date:'帳戶紀錄',points:'已加入'}];
 		function safe(value){return String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 		function renderBookCards(items,emptyMessage){
-			return items.length?items.map((b,i)=>`<article class="book-card"><div class="cover ${b.tone||['','blue','orange'][i%3]}">📖</div><div class="book-info"><h3 class="book-title">${safe(b.title)}</h3><div class="book-meta">${safe(b.author)}${b.publisher?'／'+safe(b.publisher):''}<br>已流轉 ${b.cycles} 次 · ${conditionLabels[b.condition]||'書況未標示'} · ${regionLabels[b.region]||'區域未標示'} · ${languageLabels[b.language]||'語言未標示'}${b.bookLocation?`<br>書籍位置：${safe(b.bookLocation)}`:''}<br>賣方：${safe(b.sellerName||'書友')}</div>${b.media?.length?`<div class="book-media">${b.media.map(m=>m.kind==='video'?`<video src="${safe(m.url)}" controls playsinline aria-label="${safe(m.name)}"></video>`:`<img src="${safe(m.url)}" alt="${safe(m.name)}">`).join('')}</div>`:''}<div class="book-bottom"><span class="location">⌖ ${safe(b.location)}</span><span class="points">${b.points} 環點</span></div></div><div class="book-card-actions"><button class="btn btn-small" type="button" data-trade-book-id="${Number(b.id)}">交易方式</button><button class="btn btn-light btn-small" type="button" onclick="addBookToWishlist(${Number(b.id)})">♡ 想要</button></div></article>`).join(''):`<div class="empty">${emptyMessage}</div>`;
+			return items.length?items.map((b,i)=>`<article class="book-card"><div class="cover ${b.tone||['','blue','orange'][i%3]}">📖</div><div class="book-info"><h3 class="book-title">${safe(b.title)}</h3><div class="book-meta">${safe(b.author)}${b.publisher?'／'+safe(b.publisher):''}<br>已流轉 ${b.cycles} 次 · ${conditionLabels[b.condition]||'書況未標示'} · ${regionLabels[b.region]||'區域未標示'} · ${languageLabels[b.language]||'語言未標示'}${b.bookLocation?`<br>書籍位置：${safe(b.bookLocation)}`:''}<br>賣方：${safe(b.sellerName||'書友')}</div>${b.media?.length?`<div class="book-media">${b.media.map(m=>m.kind==='video'?`<video src="${safe(m.url)}" controls playsinline aria-label="${safe(m.name)}"></video>`:`<img src="${safe(m.url)}" alt="${safe(m.name)}">`).join('')}</div>`:''}<div class="book-bottom"><span class="location">⌖ ${safe(b.location)}</span><span class="points">${b.points} 環點</span></div></div><div class="book-card-actions"><button class="btn btn-small" type="button" onclick="openTradeOptions(${Number(b.id)})">交易方式</button><button class="btn btn-light btn-small" type="button" onclick="addBookToWishlist(${Number(b.id)})">♡ 想要</button></div></article>`).join(''):`<div class="empty">${emptyMessage}</div>`;
 		}
 		function renderBooks(){
 			const availableBooks=books.filter(book=>!book.reservedBy);
@@ -1185,11 +1185,6 @@
 			}
 		}
 		scanButton.addEventListener('click',startIsbnScan);
-		document.addEventListener('click',event=>{
-			const tradeButton=event.target.closest('[data-trade-book-id]');
-			if(!tradeButton)return;
-			openTradeOptions(Number(tradeButton.dataset.tradeBookId));
-		});
 		loadPrototypeState();
 		const savedUser=localStorage.getItem('bookloop-user');
 		if(savedUser)currentUser={name:savedUser,provider:savedUser};
