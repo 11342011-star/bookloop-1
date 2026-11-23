@@ -70,6 +70,32 @@ def fetch_url(url):
 
 
 def lookup_google_books(isbn):
+    try:
+        volume_data = json.loads(fetch_url(
+            f"https://www.googleapis.com/books/v1/volumes?q={quote('isbn:' + isbn)}&maxResults=5"
+        ))
+        for volume in volume_data.get("items") or []:
+            volume_info = volume.get("volumeInfo") or {}
+            industry_ids = volume_info.get("industryIdentifiers") or []
+            matched = any(
+                normalize_isbn(item.get("identifier", "")) == isbn
+                for item in industry_ids
+                if item.get("identifier")
+            )
+            if industry_ids and not matched:
+                continue
+            title = (volume_info.get("title") or "").strip()
+            if not title:
+                continue
+            return {
+                "title": title,
+                "author": ", ".join(volume_info.get("authors") or []),
+                "publisher": (volume_info.get("publisher") or "").strip(),
+                "points": 80,
+            }
+    except (URLError, TimeoutError, OSError, json.JSONDecodeError) as error:
+        print(f"Google Books JSON lookup failed ({isbn}): {error}", file=sys.stderr)
+
     query = quote(f"isbn:{isbn}")
     feed = ET.fromstring(fetch_url(f"https://books.google.com/books/feeds/volumes?q={query}"))
     entry = feed.find(f"{{{ATOM_NS}}}entry")
@@ -302,6 +328,122 @@ def distance_km(lat1, lng1, lat2, lng2):
     return 6371 * 2 * math.atan2(math.sqrt(arc), math.sqrt(1 - arc))
 
 
+def estimate_book_points(
+    isbn, title, author, publisher, cycles, condition="", media_count=0,
+    video_count=0, condition_notes="", missing_page="unknown",
+    handwriting="unknown", damage="unknown", stains="unknown",
+):
+    valid_isbn = bool(ISBN_PATTERN.fullmatch(normalize_isbn(isbn)))
+    cycle_count = max(0, min(cycles, 50))
+    points = 55
+
+    if valid_isbn:
+        points += 15
+    if title.strip():
+        points += 5
+    if author.strip():
+        points += 10
+    if publisher.strip():
+        points += 5
+
+    textbook_keywords = ("教科", "課本", "教材", "習題", "參考書", "學習", "練習")
+    if any(keyword in title for keyword in textbook_keywords):
+        points += 20
+
+    media_count = max(0, min(media_count, 5))
+    video_count = max(0, min(video_count, media_count))
+    if media_count == 0:
+        points -= 8
+    elif media_count == 1:
+        points += 3
+    elif media_count >= 2:
+        points += 8
+    if video_count:
+        points += min(video_count * 3, 6)
+
+    condition = condition.strip()
+    condition_adjustments = {
+        "excellent": 10,
+        "good": 5,
+        "fair": 0,
+        "damaged": -15,
+    }
+    points += condition_adjustments.get(condition, 0)
+
+    notes = condition_notes.lower()
+    damage_keywords = ("破損", "撕裂", "缺頁", "水漬", "受潮", "霉", "髒污", "折角", "塗寫", "嚴重")
+    evidence_keywords = ("全新", "幾乎全新", "封面完整", "無破損")
+    def has_damage_evidence(text):
+        for keyword in damage_keywords:
+            start = 0
+            while True:
+                position = text.find(keyword, start)
+                if position < 0:
+                    break
+                prefix = text[max(0, position - 2):position]
+                if not any(negation in prefix for negation in ("無", "沒", "不")):
+                    return True
+                start = position + len(keyword)
+        return False
+
+    if has_damage_evidence(notes):
+        points -= 10
+        condition_note = "受損描述會降低環點"
+    elif any(keyword in notes for keyword in evidence_keywords):
+        points += 5
+        condition_note = "完整度描述會提高可信度"
+    else:
+        condition_note = "未提供額外受損或完整度描述"
+
+    check_labels = {
+        "missing_page": ("缺頁", missing_page),
+        "handwriting": ("筆記", handwriting),
+        "damage": ("破損", damage),
+        "stains": ("污漬", stains),
+    }
+    check_reasons = []
+    for key, (label, value) in check_labels.items():
+        if value not in ("yes", "no", "unknown"):
+            value = "unknown"
+        if value == "yes":
+            penalty = 12 if key in ("missing_page", "damage") else 8
+            points -= penalty
+            check_reasons.append(f"{label}：有，環點 -{penalty}")
+        elif value == "no":
+            points += 2
+            check_reasons.append(f"{label}：無，環點 +2")
+        else:
+            check_reasons.append(f"{label}：未確認")
+
+    condition_labels = {
+        "excellent": "近全新",
+        "good": "良好",
+        "fair": "普通",
+        "damaged": "明顯受損",
+    }
+    condition_label = condition_labels.get(condition, "未選擇")
+
+    points -= min(cycle_count * 4, 30)
+    points = max(40, min(points, 180))
+
+    reasons = [
+        "ISBN 已驗證" if valid_isbn else "ISBN 未驗證",
+        "書目資料完整" if title and author and publisher else "部分書目需手動補齊",
+        "課外／教材類別加權" if any(keyword in title for keyword in textbook_keywords) else "一般圖書",
+        f"已流轉 {cycle_count} 次，依次數調整",
+        f"已附 {media_count} 個媒體證據" if media_count else "未附照片或影片，可信度較低",
+        f"書況：{condition_label}",
+        condition_note,
+        *check_reasons,
+    ]
+    return {
+        "points": points,
+        "cycles": cycle_count,
+        "reasons": reasons,
+        "method": "BookLoop rules-based estimate",
+    }
+
+
 class BookLoopHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(ROOT), **kwargs)
@@ -317,6 +459,33 @@ class BookLoopHandler(SimpleHTTPRequestHandler):
 
     def do_GET(self):
         request = urlparse(self.path)
+        if request.path == "/api/points":
+            query = parse_qs(request.query)
+            isbn = normalize_isbn(query.get("isbn", [""])[0])
+            title = query.get("title", [""])[0].strip()
+            author = query.get("author", [""])[0].strip()
+            publisher = query.get("publisher", [""])[0].strip()
+            try:
+                cycles = int(query.get("cycles", ["0"])[0])
+            except (TypeError, ValueError):
+                cycles = 0
+            try:
+                media_count = int(query.get("mediaCount", ["0"])[0])
+                video_count = int(query.get("videoCount", ["0"])[0])
+            except (TypeError, ValueError):
+                media_count = 0
+                video_count = 0
+            condition = query.get("condition", [""])[0]
+            condition_notes = query.get("conditionNotes", [""])[0]
+            missing_page = query.get("missingPage", ["unknown"])[0]
+            handwriting = query.get("handwriting", ["unknown"])[0]
+            damage = query.get("damage", ["unknown"])[0]
+            stains = query.get("stains", ["unknown"])[0]
+            return self.send_json(200, estimate_book_points(
+                isbn, title, author, publisher, cycles,
+                condition, media_count, video_count, condition_notes,
+                missing_page, handwriting, damage, stains,
+            ))
         if request.path == "/api/stations":
             return self.get_stations(parse_qs(request.query))
         if request.path != "/api/books":
