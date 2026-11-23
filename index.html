@@ -298,7 +298,7 @@
 			{userId:'demo-reader-2',name:'書友小林',items:[{title:'原子習慣',author:'詹姆斯．克利爾',isbn:'9789571383125'}]},
 		];
 		let myWishlist=[],orders=[],topupHistory=[],sellerLedger=[],sellerBalances={},listingEvents=[],cycleCountsByIsbn={},wishlistIsPublic=true;
-		let currentUser=null,demoAccounts=[],isPublishingBook=false;
+		let currentUser=null,demoAccounts=[],isPublishingBook=false,sharedBooksSyncError=false,sharedBooksRefreshPromise=null;
 		let activeTradeBookId=null,activeTradeMode='swap',activeConversationOrderId=null,transactionBookboxLocations=[],transactionStationsError=null,transactionRenderKey='';
 		let transactionStationsLoaded=false;
 		let history=[{title:'綠色帳戶建立',detail:'BookLoop 原型體驗',date:'帳戶紀錄',points:'已加入'}];
@@ -311,22 +311,34 @@
 			document.getElementById('book-list').innerHTML=availableBooks.length?renderBookCards(availableBooks,'目前沒有可借閱的書籍，歡迎上架分享！'):'<div class="empty">目前沒有可借閱的書籍，歡迎上架分享！</div>';
 			filterBooks();
 		}
-		async function refreshSharedBooks(){
-			try{
-				const response=await fetch('/api/books',{cache:'no-store'});
-				if(!response.ok)throw new Error(`shared_books_http_${response.status}`);
-				const data=await response.json();
-				if(!Array.isArray(data.books))throw new Error('invalid_shared_books_response');
-				const knownIds=new Set(books.map(book=>String(book.id)));
-				const newBooks=data.books.filter(book=>book&&book.id!==undefined&&!knownIds.has(String(book.id))).map(book=>({...book,media:[]}));
-				if(!newBooks.length)return;
-				books=[...newBooks,...books];
-				persistPrototypeState();
-				renderBooks();
-				renderWishlist();
-			}catch(error){
-				console.warn('Shared books could not be refreshed',error);
-			}
+		function refreshSharedBooks(){
+			if(sharedBooksRefreshPromise)return sharedBooksRefreshPromise;
+			sharedBooksRefreshPromise=(async()=>{
+				try{
+					const response=await fetch('/api/books',{cache:'no-store'});
+					if(!response.ok)throw new Error(`shared_books_http_${response.status}`);
+					const data=await response.json();
+					if(!Array.isArray(data.books))throw new Error('invalid_shared_books_response');
+					const knownIds=new Set(books.map(book=>String(book.id)));
+					const newBooks=data.books.filter(book=>book&&book.id!==undefined&&!knownIds.has(String(book.id))).map(book=>({...book,media:[]}));
+					sharedBooksSyncError=false;
+					if(newBooks.length){
+						books=[...newBooks,...books];
+						persistPrototypeState();
+						renderBooks();
+						renderWishlist();
+					}else{
+						filterBooks();
+					}
+				}catch(error){
+					sharedBooksSyncError=true;
+					console.error('Shared books could not be refreshed',error);
+					filterBooks();
+				}finally{
+					sharedBooksRefreshPromise=null;
+				}
+			})();
+			return sharedBooksRefreshPromise;
 		}
 		function filterBooks(){
 			const queryInput=document.getElementById('search-query').value.trim();
@@ -342,7 +354,7 @@
 				const matchesLanguage=!language||(language==='unknown'?!book.language:book.language===language);
 				return matchesQuery&&matchesRegion&&matchesCondition&&matchesLanguage;
 			});
-			document.getElementById('search-result-count').textContent=`找到 ${filtered.length} 本書`;
+			document.getElementById('search-result-count').textContent=`找到 ${filtered.length} 本書${sharedBooksSyncError?'；共享書庫同步失敗，請確認伺服器已部署並重啟，且雙方連線至同一服務。':''}`;
 			document.getElementById('search-results').innerHTML=renderBookCards(filtered,'沒有符合條件的書籍，試試調整篩選條件。');
 			document.getElementById('search-retailer-prompt').hidden=filtered.length>0||!queryInput;
 		}
@@ -949,6 +961,7 @@
 			if(name==='wallet')renderWallet();
 			if(name==='transaction')renderTransactionPage();
 			if(name==='admin')loadAdminAnalytics();
+			if(name==='search')refreshSharedBooks();
 			window.scrollTo({top:0,behavior:'smooth'});
 		}
 		document.addEventListener('keydown',event=>{if(event.key==='Escape')closeFeatureMenu()});
@@ -1387,7 +1400,12 @@
 		updateAuthState();
 		renderBooks();renderHistory();updateAccount();renderMediaPreview();renderWishlist();renderWallet();settleEligibleOrders();setInterval(settleEligibleOrders,60000);
 		refreshSharedBooks();setInterval(refreshSharedBooks,30000);window.addEventListener('focus',refreshSharedBooks);
-		document.getElementById('search-query').addEventListener('input',filterBooks);
+		let searchSyncTimer;
+		document.getElementById('search-query').addEventListener('input',()=>{
+			filterBooks();
+			clearTimeout(searchSyncTimer);
+			searchSyncTimer=setTimeout(refreshSharedBooks,250);
+		});
 		['search-region','search-condition','search-language'].forEach(id=>document.getElementById(id).addEventListener('change',filterBooks));
 		['input-title','input-author','input-publisher','input-isbn','input-condition','input-condition-notes'].forEach(id=>{
 			document.getElementById(id).addEventListener('change',updatePointEstimate);
