@@ -96,6 +96,24 @@ def lookup_google_books(isbn):
     except (URLError, TimeoutError, OSError, json.JSONDecodeError) as error:
         print(f"Google Books JSON lookup failed ({isbn}): {error}", file=sys.stderr)
 
+    details = GoogleBooksDetailsParser()
+    try:
+        details.feed(fetch_url(
+            f"https://books.google.com/books?vid=ISBN{quote(isbn)}&hl=zh-TW"
+        ).decode("utf-8", "replace"))
+    except (URLError, TimeoutError, OSError) as error:
+        print(f"Google Books ISBN page lookup failed ({isbn}): {error}", file=sys.stderr)
+    page_isbns = details.metadata.get("isbn", "")
+    if any(normalize_isbn(value) == isbn for value in re.split(r"[,;]", page_isbns)):
+        title = details.metadata.get("書名") or details.metadata.get("title", "")
+        if title:
+            return {
+                "title": title,
+                "author": details.metadata.get("作者") or details.metadata.get("author", ""),
+                "publisher": details.metadata.get("出版者") or details.metadata.get("publisher", ""),
+                "points": 80,
+            }
+
     query = quote(f"isbn:{isbn}")
     feed = ET.fromstring(fetch_url(f"https://books.google.com/books/feeds/volumes?q={query}"))
     entry = feed.find(f"{{{ATOM_NS}}}entry")
@@ -107,7 +125,7 @@ def lookup_google_books(isbn):
         for item in entry.findall(f"{{{DC_NS}}}identifier")
         if item.text and item.text.startswith("ISBN:")
     ]
-    if identifiers and not any(normalize_isbn(value) == isbn for value in identifiers):
+    if not any(normalize_isbn(value) == isbn for value in identifiers):
         return None
 
     title = entry.findtext(f"{{{ATOM_NS}}}title", "").strip()
