@@ -22,9 +22,13 @@ page session, but is not uploaded or saved after a refresh.
 ## Wishlist and transaction prototype
 
 The wishlist, local book matching, point top-ups, and order states are a
-browser-local prototype persisted in `localStorage`; they are not synchronized
-between users or devices. Matching is based on ISBN, title, and author rather
-than an external AI service. Book trades offer book-for-book, points, and cash
+browser-local prototype persisted in `localStorage`; local demo accounts have
+separate IDs and separate wallets, orders, and wishlists, but are not synced
+between browsers or devices and do not authenticate real Google/Apple accounts.
+Each local demo account receives 150 starter points once, after its first
+successful book listing. Listing points use the backend rules-based estimator:
+ISBN validity, catalog fields, condition, evidence, and previous circulations
+affect the score; this is not an AI evaluation. Book trades offer book-for-book, points, and cash
 options; the prototype cash amount reuses the book's points value at NT$1 per
 point and never collects real money. Buyers can specify a convenience-store
 branch or choose an illustrative campus/MRT book-box location. Book-box

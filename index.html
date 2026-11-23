@@ -30,11 +30,11 @@
 			<div class="hero-top"><div><h1 class="brand"><img class="brand-logo" src="assets/bookloop-logo.png?v=gold" alt="">書環 BookLoop</h1><p class="tagline">讓好書繼續旅行，讓循環更有價值</p></div><button id="menu-toggle" class="menu-toggle" type="button" aria-label="開啟功能選單" aria-controls="feature-drawer" aria-expanded="false" onclick="openFeatureMenu()"><span></span><span></span><span></span></button></div>
 			<div class="account">
 				<div class="guest-account account-head">
-					<span id="account-title">訪客瀏覽中</span>
+					<span><span id="account-title">訪客瀏覽中</span><small id="account-id" class="account-id" hidden></small></span>
 					<button class="btn btn-small" id="btn-open-auth" type="button" onclick="openAuth()">登入／註冊</button>
 				</div>
 				<div class="stats">
-					<div class="stat"><small>可用環點</small><strong id="user-points">150</strong></div>
+					<div class="stat"><small>可用環點</small><strong id="user-points">0</strong></div>
 					<div class="stat"><small>累積減碳量</small><strong><span id="user-carbon">0.00</span> <span>kg</span></strong></div>
 					<div class="stat"><small>書籍流轉數</small><strong><span id="user-cycles">0</span> <span>次</span></strong></div>
 				</div>
@@ -97,7 +97,7 @@
 				<p class="subtle">點數換書採 1:1 儲值原型；買書點數先託管，超商取件或書箱交付完成後開始 72 小時爭議期，期滿才撥入賣方點數帳戶。</p>
 				<div class="prototype-note">原型模式：以下儲值、物流狀態、Webhook 與入帳皆為本機模擬，不會真的扣款或連線超商。正式版必須由伺服器驗證超商 C2C 簽章 Webhook；頁面操作不得作為履約證明。原型風控會標記 1 點異常低價、30 天相同帳號配對重複 ISBN，以及一分鐘大量上架；IP／裝置／提領帳戶比對必須在有授權的伺服器端執行。行銷加碼點數示意為 365 天有效，儲值與售書點數不設定此期限。</div>
 				<div class="form-card">
-					<div><small class="book-meta">可用環點餘額</small><div class="wallet-balance"><span id="wallet-points">150</span> 點</div><small class="book-meta">賣方可用入帳：<strong id="seller-account-points">0</strong> 點</small></div>
+					<div><small class="book-meta">可用環點餘額</small><div class="wallet-balance"><span id="wallet-points">0</span> 點</div><small class="book-meta">賣方可用入帳：<strong id="seller-account-points">0</strong> 點</small></div>
 					<div class="field"><label for="topup-amount">儲值金額（NT$1 = 1 點）</label><input id="topup-amount" type="number" min="1" max="10000" step="1" placeholder="輸入儲值金額"></div>
 					<div class="field"><label for="topup-method">儲值方式（原型示意）</label><select id="topup-method"><option value="card">信用卡（模擬）</option><option value="atm">ATM 轉帳（模擬）</option><option value="store">超商代碼（模擬）</option></select></div>
 					<button class="btn full" type="button" onclick="topUpPoints()">模擬儲值並取得環點</button>
@@ -130,12 +130,12 @@
 					<div class="field"><label for="input-title">書籍名稱</label><input id="input-title" placeholder="查詢後自動帶入"></div>
 					<div class="two-col"><div class="field"><label for="input-author">作者（可手動輸入中文）</label><input id="input-author" placeholder="例如：王小明"></div><div class="field"><label for="input-publisher">出版社（可手動輸入中文）</label><input id="input-publisher" placeholder="例如：天下文化"></div></div>
 					<div class="two-col">
-						<div class="field"><label for="input-points">預估環點</label><input id="input-points" type="number" min="40" max="180" onchange="updatePointEstimate()"></div>
+						<div class="field"><label for="input-points">預估環點（依書目與書況）</label><input id="input-points" type="number" min="40" max="180" readonly placeholder="完成書籍資料後自動估算"></div>
 						<div class="field"><label for="input-cycles">目前流轉次數（上限 8 次）</label><input id="input-cycles" type="number" min="0" max="8" value="0" onchange="updatePointEstimate()"></div>
 					</div>
 					<div id="point-estimate" class="point-estimate" role="status" hidden>
-						<div class="point-estimate-head"><span>智慧預估</span><strong id="estimated-points"></strong></div>
-						<ul><li>根據 ISBN、書目資料與流轉次數評估</li></ul>
+						<div class="point-estimate-head"><span>書環規則式估價（非 AI）</span><strong id="estimated-points"></strong></div>
+						<ul><li>依 ISBN、書目完整度、書況、照片證據與累積流轉次數調整；每次流轉會逐步減點。</li></ul>
 					</div>
 					<div class="field"><label for="input-book-location">書籍目前位置（選填）</label><input id="input-book-location" placeholder="例如：台北市大安區／宿舍書架"></div>
 					<div class="two-col">
@@ -241,9 +241,14 @@
 	<div id="auth-modal" class="auth-modal" role="dialog" aria-modal="true" aria-labelledby="auth-title">
 		<div class="auth-panel">
 			<div class="between"><h2 id="auth-title">登入 BookLoop</h2><button class="auth-close" type="button" onclick="closeAuth()" aria-label="關閉">×</button></div>
-			<p class="subtle">訪客可瀏覽書庫；登入後才能上架、交換或查看個人履歷。</p>
-			<button class="auth-provider google" type="button" onclick="completeAuth('Google 帳戶')">G　使用 Google 帳戶繼續</button>
-			<button class="auth-provider apple" type="button" onclick="completeAuth('Apple 帳戶')">●　使用 Apple 帳戶繼續</button>
+			<p class="subtle">原型登入不會連接 Google／Apple 驗證。建立本機示意帳號後會取得專屬 ID，點數、訂單與願望資料各自保存；首次成功上架後贈送 150 點。</p>
+			<button class="auth-provider google" type="button" onclick="completeAuth('Google 示意帳戶')">G　建立 Google 示意帳號</button>
+			<button class="auth-provider apple" type="button" onclick="completeAuth('Apple 示意帳戶')">●　建立 Apple 示意帳號</button>
+			<div id="saved-demo-accounts" class="form-card" hidden>
+				<div class="field"><label for="demo-account-select">登入此裝置的既有帳號</label><select id="demo-account-select"></select></div>
+				<button class="btn btn-light" type="button" onclick="loginSavedDemoAccount()">登入選取的帳號</button>
+			</div>
+			<div id="demo-account-status" class="status" role="status"></div>
 			<div class="auth-divider">或使用電話號碼</div>
 			<div class="phone-auth">
 				<div class="phone-row">
@@ -279,7 +284,7 @@
 	</div>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 	<script>
-		let userPoints=150,userCarbon=0,userCycles=0,userCoupons=2;
+		let userPoints=0,userCarbon=0,userCycles=0,userCoupons=0;
 		const MAX_BOOK_CYCLES=8;
 		const SETTLEMENT_HOURS=72;
 		const regionLabels={north:'北部',central:'中部',south:'南部',east:'東部',islands:'離島'};
@@ -295,6 +300,7 @@
 			{userId:'demo-reader-2',name:'書友小林',items:[{title:'原子習慣',author:'詹姆斯．克利爾',isbn:'9789571383125'}]},
 		];
 		let myWishlist=[],orders=[],topupHistory=[],sellerLedger=[],sellerBalances={},listingEvents=[],cycleCountsByIsbn={},wishlistIsPublic=true;
+		let currentUser=null,demoAccounts=[];
 		let activeTradeBookId=null,activeTradeMode='swap',activeConversationOrderId=null,transactionBookboxLocations=[],transactionStationsError=null,transactionRenderKey='';
 		let transactionStationsLoaded=false;
 		let history=[{title:'綠色帳戶建立',detail:'BookLoop 原型體驗',date:'帳戶紀錄',points:'已加入'}];
@@ -360,8 +366,8 @@
 			document.getElementById('search-language').value='';
 			filterBooks();
 		}
-		function currentAccountId(){return currentUser?.provider||'demo-account'}
-		function availablePoints(){expirePromotionalPoints();return userPoints+(sellerBalances[currentAccountId()]||0)}
+		function currentAccountId(){return currentUser?.id||''}
+		function availablePoints(){if(!currentUser)return 0;expirePromotionalPoints();return userPoints+(sellerBalances[currentAccountId()]||0)}
 		function spendPoints(amount){
 			expirePromotionalPoints();
 			let remaining=amount,sellerBalance=sellerBalances[currentAccountId()]||0;
@@ -386,29 +392,60 @@
 			userPoints+=allocation.userPoints||0;
 			order.pointsRefunded=true;
 		}
+		function blankAccountState(){
+			return {userPoints:0,userCarbon:0,userCycles:0,userCoupons:2,myWishlist:[],orders:[],topupHistory:[],sellerLedger:[],sellerBalances:{},listingEvents:[],wishlistIsPublic:true,history:[{title:'綠色帳戶建立',detail:'BookLoop 原型體驗',date:'帳戶紀錄',points:'已加入'}]};
+		}
+		function persistDemoAccounts(){
+			localStorage.setItem('bookloop-demo-accounts',JSON.stringify(demoAccounts));
+		}
+		function renderDemoAccountOptions(){
+			const container=document.getElementById('saved-demo-accounts');
+			const select=document.getElementById('demo-account-select');
+			container.hidden=!demoAccounts.length;
+			select.innerHTML=demoAccounts.map(account=>`<option value="${safe(account.id)}">${safe(account.provider)} · ${safe(account.id)}</option>`).join('');
+		}
+		function applyAccountState(state={}){
+			const defaults=blankAccountState();
+			userPoints=Number.isFinite(state.userPoints)&&state.userPoints>=0?state.userPoints:defaults.userPoints;
+			userCarbon=Number.isFinite(state.userCarbon)&&state.userCarbon>=0?state.userCarbon:defaults.userCarbon;
+			userCycles=Number.isFinite(state.userCycles)&&state.userCycles>=0?state.userCycles:defaults.userCycles;
+			userCoupons=Number.isInteger(state.userCoupons)&&state.userCoupons>=0?state.userCoupons:defaults.userCoupons;
+			myWishlist=Array.isArray(state.myWishlist)?state.myWishlist:defaults.myWishlist;
+			orders=Array.isArray(state.orders)?state.orders:defaults.orders;
+			topupHistory=Array.isArray(state.topupHistory)?state.topupHistory:defaults.topupHistory;
+			sellerLedger=Array.isArray(state.sellerLedger)?state.sellerLedger:defaults.sellerLedger;
+			sellerBalances=state.sellerBalances&&typeof state.sellerBalances==='object'?state.sellerBalances:defaults.sellerBalances;
+			listingEvents=Array.isArray(state.listingEvents)?state.listingEvents:defaults.listingEvents;
+			wishlistIsPublic=typeof state.wishlistIsPublic==='boolean'?state.wishlistIsPublic:defaults.wishlistIsPublic;
+			history=Array.isArray(state.history)?state.history:defaults.history;
+		}
 		function persistPrototypeState(){
-			try{localStorage.setItem('bookloop-demo-state',JSON.stringify({userPoints,userCarbon,userCycles,userCoupons,myWishlist,orders,topupHistory,sellerLedger,sellerBalances,listingEvents,cycleCountsByIsbn,wishlistIsPublic,books:books.map(book=>({...book,media:[]}))}))}
-			catch(error){console.error('Prototype state could not be saved',error);toast('原型資料無法儲存，請確認瀏覽器儲存空間設定')}
+			try{
+				localStorage.setItem('bookloop-books',JSON.stringify(books.map(book=>({...book,media:[]}))));
+				localStorage.setItem('bookloop-cycle-counts',JSON.stringify(cycleCountsByIsbn));
+				if(!currentUser)return;
+				localStorage.setItem(`bookloop-account-${currentUser.id}`,JSON.stringify({userPoints,userCarbon,userCycles,userCoupons,myWishlist,orders,topupHistory,sellerLedger,sellerBalances,listingEvents,wishlistIsPublic,history}));
+			}catch(error){console.error('Prototype state could not be saved',error);toast('原型資料無法儲存，請確認瀏覽器儲存空間設定')}
 		}
 		function loadPrototypeState(){
 			try{
-				const raw=localStorage.getItem('bookloop-demo-state');
-				if(!raw)return;
-				const state=JSON.parse(raw);
-				if(Number.isFinite(state.userPoints)&&state.userPoints>=0)userPoints=state.userPoints;
-				if(Number.isFinite(state.userCarbon)&&state.userCarbon>=0)userCarbon=state.userCarbon;
-				if(Number.isFinite(state.userCycles)&&state.userCycles>=0)userCycles=state.userCycles;
-				if(Number.isInteger(state.userCoupons)&&state.userCoupons>=0)userCoupons=state.userCoupons;
-				if(Array.isArray(state.myWishlist))myWishlist=state.myWishlist;
-				if(Array.isArray(state.orders))orders=state.orders;
-				if(Array.isArray(state.topupHistory))topupHistory=state.topupHistory;
-				if(Array.isArray(state.sellerLedger))sellerLedger=state.sellerLedger;
-				if(state.sellerBalances&&typeof state.sellerBalances==='object')sellerBalances=state.sellerBalances;
-				if(Array.isArray(state.listingEvents))listingEvents=state.listingEvents;
-				if(state.cycleCountsByIsbn&&typeof state.cycleCountsByIsbn==='object')cycleCountsByIsbn=state.cycleCountsByIsbn;
-				if(typeof state.wishlistIsPublic==='boolean')wishlistIsPublic=state.wishlistIsPublic;
-				if(Array.isArray(state.books))books=state.books.map(book=>({...book,media:[]}));
-			}catch(error){console.error('Prototype state could not be loaded',error)}
+				const savedBooks=localStorage.getItem('bookloop-books');
+				const legacyRaw=localStorage.getItem('bookloop-demo-state');
+				const legacy=legacyRaw?JSON.parse(legacyRaw):null;
+				if(savedBooks){
+					const parsedBooks=JSON.parse(savedBooks);
+					if(Array.isArray(parsedBooks))books=parsedBooks.map(book=>({...book,media:[]}));
+				}else if(Array.isArray(legacy?.books)){
+					books=legacy.books.map(book=>({...book,media:[]}));
+					localStorage.setItem('bookloop-books',JSON.stringify(books));
+				}
+				const savedCycles=localStorage.getItem('bookloop-cycle-counts');
+				const cycles=savedCycles?JSON.parse(savedCycles):legacy?.cycleCountsByIsbn;
+				if(cycles&&typeof cycles==='object')cycleCountsByIsbn=cycles;
+				if(!currentUser){applyAccountState({userCoupons:0});return}
+				const savedAccount=localStorage.getItem(`bookloop-account-${currentUser.id}`);
+				applyAccountState(savedAccount?JSON.parse(savedAccount):blankAccountState());
+			}catch(error){console.error('Prototype state could not be loaded',error);applyAccountState(currentUser?blankAccountState():{userCoupons:0})}
 		}
 		function renderWishlist(){
 			const visibility=document.getElementById('wishlist-public');
@@ -827,10 +864,31 @@
 			const days=document.getElementById('admin-days').value;
 			window.location.assign(`/api/admin/analytics.csv?days=${encodeURIComponent(days)}`);
 		}
-		let currentUser=null;
 		function openAuth(){document.getElementById('auth-modal').classList.add('show')}
 		function closeAuth(){document.getElementById('auth-modal').classList.remove('show')}
-		function completeAuth(provider){currentUser={name:provider,provider};localStorage.setItem('bookloop-user',provider);trackPlatformEvent('customer_seen');updateAuthState();closeAuth();renderWishlist();renderWallet();updateAccount();toast(`已以${provider}登入（原型示意）`)}
+		function completeAuth(provider){
+			const account={id:`BL-${createAnalyticsId()}`,provider,createdAt:Date.now(),starterPointsGranted:false};
+			demoAccounts.push(account);
+			currentUser=account;
+			persistDemoAccounts();
+			localStorage.setItem('bookloop-current-account',account.id);
+			applyAccountState(blankAccountState());
+			persistPrototypeState();
+			trackPlatformEvent('customer_seen');
+			updateAuthState();closeAuth();renderWishlist();renderWallet();renderHistory();updateAccount();
+			toast(`已建立本機示意帳號，ID：${account.id}`);
+		}
+		function loginSavedDemoAccount(){
+			const account=demoAccounts.find(item=>item.id===document.getElementById('demo-account-select').value);
+			if(!account){adminStatus('demo-account-status','請先選擇有效的本機示意帳號。',true);return}
+			if(currentUser)persistPrototypeState();
+			currentUser=account;
+			localStorage.setItem('bookloop-current-account',account.id);
+			loadPrototypeState();
+			updateAuthState();closeAuth();renderWishlist();renderWallet();renderHistory();updateAccount();
+			trackPlatformEvent('customer_seen');
+			toast(`已登入本機示意帳號 ${account.id}`);
+		}
 		function sendPhoneCode(){
 			const country=document.getElementById('auth-country').value.trim();
 			const phone=document.getElementById('auth-phone').value.trim();
@@ -840,14 +898,16 @@
 			document.getElementById('auth-code').focus();
 			toast('原型示意：測試階段可輸入任意 6 碼');
 		}
-		function confirmPhoneAuth(){const code=document.getElementById('auth-code').value.trim();if(!/^\d{6}$/.test(code)){toast('請輸入 6 碼驗證碼');return}const phone=document.getElementById('auth-country').value.trim()+document.getElementById('auth-phone').value.trim();completeAuth(`電話 ${phone}`)}
+		function confirmPhoneAuth(){const code=document.getElementById('auth-code').value.trim();if(!/^\d{6}$/.test(code)){toast('請輸入 6 碼驗證碼');return}completeAuth('手機示意帳戶')}
 		function updateAuthState(){
 			const title=document.getElementById('account-title');
 			const button=document.getElementById('btn-open-auth');
-			if(currentUser){title.textContent=`已登入：${currentUser.provider}`;button.textContent='登出';button.onclick=logout}
-			else{title.textContent='訪客瀏覽中';button.textContent='登入／註冊';button.onclick=openAuth}
+			const idElement=document.getElementById('account-id');
+			if(currentUser){title.textContent=`已登入：${currentUser.provider}`;idElement.textContent=`帳號 ID：${currentUser.id}`;idElement.hidden=false;button.textContent='登出';button.onclick=logout}
+			else{title.textContent='訪客瀏覽中';idElement.textContent='';idElement.hidden=true;button.textContent='登入／註冊';button.onclick=openAuth}
+			renderDemoAccountOptions();
 		}
-		function logout(){currentUser=null;localStorage.removeItem('bookloop-user');updateAuthState();renderWishlist();updateAccount();switchTab('market');toast('已登出')}
+		function logout(){persistPrototypeState();currentUser=null;localStorage.removeItem('bookloop-current-account');applyAccountState({userCoupons:0});updateAuthState();renderWishlist();renderWallet();renderHistory();updateAccount();switchTab('market');toast('已登出')}
 		function requireAuth(){if(currentUser)return true;openAuth();toast('上架、交易、願望管理與錢包需要先登入');return false}
 		function openFeatureMenu(){
 			const shell=document.getElementById('feature-drawer-shell');
@@ -1034,6 +1094,10 @@
 				estimate.hidden=true;
 				return;
 			}
+			document.getElementById('input-points').value='';
+			document.getElementById('estimated-points').textContent='估價中…';
+			document.querySelector('#point-estimate ul').innerHTML='<li>正在依書目、書況與流轉次數計算。</li>';
+			estimate.hidden=false;
 			const cycleKey=isbn||title.toLowerCase();
 			const cycles=Math.max(cycleCountsByIsbn[cycleKey]||0,Math.min(MAX_BOOK_CYCLES,Number(document.getElementById('input-cycles').value)||0));
 			const condition=document.getElementById('input-condition').value;
@@ -1056,6 +1120,11 @@
 				estimate.hidden=false;
 			}catch(error){
 				console.error('Point estimate failed',error);
+				if(requestId===pointEstimateRequestId){
+					document.getElementById('estimated-points').textContent='暫無法估價';
+					document.querySelector('#point-estimate ul').innerHTML='<li>估價服務目前無法使用；請稍後重試，成功估價後才能上架。</li>';
+					estimate.hidden=false;
+				}
 			}
 		}
 		async function fetchBookInfo(){
@@ -1095,7 +1164,7 @@
 			const title=document.getElementById('input-title').value.trim();
 			const author=document.getElementById('input-author').value.trim();
 			const publisher=document.getElementById('input-publisher').value.trim();
-			const points=Math.max(1,Number(document.getElementById('input-points').value)||80);
+			const points=Number(document.getElementById('input-points').value);
 			const cycleKey=isbn||title.toLowerCase();
 			const cycles=Math.max(cycleCountsByIsbn[cycleKey]||0,Math.min(MAX_BOOK_CYCLES,Number(document.getElementById('input-cycles').value)||0));
 			const condition=document.getElementById('input-condition').value;
@@ -1111,6 +1180,7 @@
 			const region=document.getElementById('input-region').value;
 			const language=document.getElementById('input-language').value;
 			if(!title||!author){toast('請先輸入書名與作者');return}
+			if(!Number.isInteger(points)||points<40||points>180){toast('請先完成書籍資料估價，成功估價後才能上架');return}
 			if(cycles>=MAX_BOOK_CYCLES){toast(`單本書最多流轉 ${MAX_BOOK_CYCLES} 次，已達上限`);return}
 			if(!location){toast('請先定位並選擇最近書箱站，或選擇超商交付');return}
 			const media=pendingMedia.map(({name,kind,url})=>({name,kind,url}));
@@ -1121,10 +1191,18 @@
 			books.unshift({id:bookId,isbn,title,author,publisher,points,cycles,condition,conditionNotes,conditionChecks,location,bookLocation,region,language,sellerId,sellerName:currentUser?.provider||'我的書友帳戶',listingBonusPoints:riskFlags.length?0:50,riskFlags,media,tone:'green'});
 			trackPlatformEvent('book_listed',{isbn,region,language,condition,points});
 			history.unshift({title:'新書上架',detail:`《${title}》・${location}`,date:'剛剛',points:'待履約後計入流轉'});
+			let starterPointsAwarded=0;
+			if(!currentUser.starterPointsGranted){
+				userPoints+=150;
+				currentUser.starterPointsGranted=true;
+				starterPointsAwarded=150;
+				persistDemoAccounts();
+				history.unshift({title:'首次上架贈點',detail:'完成第一本書籍上架',date:'剛剛',points:'+150 環點'});
+			}
 			persistPrototypeState();renderBooks();renderHistory();renderWishlist();updateAccount();
 			document.getElementById('input-isbn').value='';document.getElementById('input-title').value='';document.getElementById('input-author').value='';document.getElementById('input-publisher').value='';document.getElementById('input-book-location').value='';document.getElementById('input-region').value='';document.getElementById('input-language').value='';document.getElementById('input-points').value='';document.getElementById('input-cycles').value=0;document.getElementById('input-condition').value='';document.getElementById('input-condition-notes').value='';
 			document.querySelectorAll('.condition-checks input[type="radio"][value="unknown"]').forEach(input=>input.checked=true);
-			pendingMedia=[];renderMediaPreview();updatePointEstimate();toast(riskFlags.length?'已上架；短時間大量上架，獎勵資格待審查':'上架成功；獎勵須等超商取件驗證與 72 小時爭議期後發放');
+			pendingMedia=[];renderMediaPreview();updatePointEstimate();toast(starterPointsAwarded?`上架成功！首次上架贈送 ${starterPointsAwarded} 環點。${riskFlags.length?'行銷加碼資格待審查。':'後續獎勵須依交易履約條件發放。'}`:riskFlags.length?'已上架；短時間大量上架，獎勵資格待審查':'上架成功；後續獎勵須依交易履約條件發放');
 		}
 		function requestBook(id){openTradeOptions(id)}
 		async function locateNearestStation(){
@@ -1192,9 +1270,20 @@
 			const target=event.target instanceof Element?event.target.closest('[data-trade-book-id]'):null;
 			if(target)openTradeOptions(target.dataset.tradeBookId);
 		});
+		try{
+			const storedAccounts=JSON.parse(localStorage.getItem('bookloop-demo-accounts')||'[]');
+			if(Array.isArray(storedAccounts))demoAccounts=storedAccounts.filter(account=>account&&typeof account.id==='string'&&typeof account.provider==='string');
+		}catch(error){console.error('Local demo account list could not be loaded',error)}
+		const savedAccountId=localStorage.getItem('bookloop-current-account');
+		currentUser=demoAccounts.find(account=>account.id===savedAccountId)||null;
+		if(!currentUser&&localStorage.getItem('bookloop-user')){
+			currentUser={id:`BL-${createAnalyticsId()}`,provider:'舊版本機帳號（示意）',createdAt:Date.now(),starterPointsGranted:false};
+			demoAccounts.push(currentUser);
+			persistDemoAccounts();
+			localStorage.setItem('bookloop-current-account',currentUser.id);
+			localStorage.removeItem('bookloop-user');
+		}
 		loadPrototypeState();
-		const savedUser=localStorage.getItem('bookloop-user');
-		if(savedUser)currentUser={name:savedUser,provider:savedUser};
 		updateAuthState();
 		renderBooks();renderHistory();updateAccount();renderMediaPreview();renderWishlist();renderWallet();settleEligibleOrders();setInterval(settleEligibleOrders,60000);
 		document.getElementById('search-query').addEventListener('input',filterBooks);
