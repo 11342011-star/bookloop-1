@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta name="theme-color" content="#087f5b">
+	<title>書環 BookLoop｜綠色共享書庫</title>
+	<style>
+		:root{--green:#087f5b;--green-dark:#066047;--mint:#e9f7f0;--ink:#17231e;--muted:#75817b;--line:#e6ece8;--gold:#ffdf7b}
+		*{box-sizing:border-box}body{margin:0;background:#f1f5f2;color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"PingFang TC","Microsoft JhengHei",sans-serif}button,input,select{font:inherit}button{cursor:pointer}.app{max-width:480px;min-height:100vh;margin:auto;background:#fff;box-shadow:0 12px 40px #153d2b12;position:relative;padding-bottom:88px}
+		.hero{color:white;padding:25px 20px 20px;background:linear-gradient(135deg,#087f5b,#0f766e);border-radius:0 0 28px 28px}.hero-top,.row,.between{display:flex;align-items:center;justify-content:space-between}.brand{margin:0;font-size:21px;letter-spacing:.04em}.tagline{font-size:12px;color:#d7f4e7;margin:5px 0 18px}.demo{border:1px solid #ffffff3d;background:#ffffff20;border-radius:20px;padding:6px 10px;font-size:11px;color:#e8fff3;white-space:nowrap}.account{background:#ffffff1c;border:1px solid #ffffff30;border-radius:18px;padding:14px}.account-head{font-size:12px;color:#e0f6e9;margin-bottom:12px}.linked{background:var(--gold);color:#594514;border-radius:20px;padding:4px 8px;font-size:10px;font-weight:700}.stats{display:grid;grid-template-columns:repeat(3,1fr);text-align:center}.stat+ .stat{border-left:1px solid #ffffff35}.stat small{display:block;color:#dbf5e5;font-size:11px}.stat strong{display:block;font-size:23px;margin-top:3px}.stat strong span{font-size:11px;font-weight:500}
+		main{padding:20px 16px}.section{display:none}.section.active{display:block}.section-title{font-size:18px;margin:0;font-weight:750}.subtle{font-size:12px;line-height:1.6;color:var(--muted);margin:7px 0 15px}.coupon{font-size:11px;color:var(--green);background:var(--mint);padding:7px 9px;border-radius:9px;font-weight:650}.book-list,.station-list,.history-list{display:grid;gap:11px;margin-top:14px}.book-card,.station-card,.history-card,.form-card,.notice{border:1px solid var(--line);border-radius:17px;padding:14px;background:#fff}.book-card{display:flex;gap:12px;align-items:flex-start}.cover{width:53px;height:68px;flex:none;border-radius:9px;background:linear-gradient(145deg,#daf2e4,#a6d9bb);display:grid;place-items:center;font-size:25px}.cover.blue{background:linear-gradient(145deg,#e1edff,#aec9ef)}.cover.orange{background:linear-gradient(145deg,#fff1d2,#f3cf92)}.book-info{min-width:0;flex:1}.book-title{font-weight:750;font-size:14px;line-height:1.45;margin:1px 0 5px}.book-meta{font-size:11px;color:var(--muted);line-height:1.6}.book-bottom{display:flex;justify-content:space-between;align-items:center;margin-top:9px;gap:6px}.location{color:#607169;font-size:10px}.points{color:#b47c06;font-weight:750;font-size:12px;white-space:nowrap}.btn{border:0;border-radius:10px;background:var(--green);color:white;padding:9px 12px;font-weight:700;font-size:12px}.btn:hover{background:var(--green-dark)}.btn-light{background:var(--mint);color:var(--green)}.btn-light:hover{background:#d7f0e1}.btn-small{padding:7px 10px}.full{width:100%;padding:12px}.form-card{display:grid;gap:13px;margin-top:14px}.field label{display:block;font-size:12px;font-weight:700;margin-bottom:6px}.field input,.field select{width:100%;border:1px solid #dce5df;border-radius:10px;padding:10px 11px;background:#fff;outline:none;font-size:13px}.field input:focus,.field select:focus{border-color:var(--green);box-shadow:0 0 0 3px #087f5b15}.two-col{display:grid;grid-template-columns:1fr 1fr;gap:10px}.scanner{margin-top:14px;background:#f6faf7;border:1.5px dashed #91c9a9;border-radius:17px;padding:17px;text-align:center}.camera-icon{font-size:32px}.scanner p{font-size:11px;color:var(--muted);margin:6px 0 12px}.status{display:none;padding:10px 12px;border-radius:10px;background:var(--mint);color:var(--green);font-size:12px;margin-top:10px}.status.show{display:block}.notice{background:#fff8e6;border-color:#f6e5ad;color:#705914;font-size:11px;line-height:1.65}.notice strong{color:#39734d}.station-card{display:flex;align-items:center;gap:11px}.station-icon{height:42px;width:42px;border-radius:13px;background:var(--mint);display:grid;place-items:center;font-size:20px}.station-text{flex:1}.station-text strong{font-size:13px}.station-text p{margin:4px 0 0;color:var(--muted);font-size:11px}.badge{background:#edf8f1;color:var(--green);font-size:10px;padding:4px 7px;border-radius:12px;white-space:nowrap}.history-card{font-size:12px}.history-card p{margin:5px 0;color:var(--muted)}.empty{text-align:center;padding:25px;color:var(--muted);font-size:13px}
+		nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:min(100%,480px);background:#ffffffed;backdrop-filter:blur(12px);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(4,1fr);padding:8px 7px max(9px,env(safe-area-inset-bottom));z-index:5}nav button{background:none;border:0;color:#7a8780;font-size:10px;padding:4px 1px;display:grid;justify-items:center;gap:3px}nav button .icon{font-size:19px}nav button.active{color:var(--green);font-weight:750}.toast{position:fixed;z-index:10;bottom:85px;left:50%;transform:translate(-50%,12px);opacity:0;pointer-events:none;background:#20372c;color:white;padding:11px 15px;border-radius:12px;font-size:12px;transition:.2s;max-width:90%;text-align:center}.toast.show{opacity:1;transform:translate(-50%,0)}
+		@media(min-width:700px){body{padding:20px 0}.app{width:calc(100% - 40px);max-width:1180px;border-radius:24px;overflow:hidden;min-height:calc(100vh - 40px)}main{max-width:1120px;margin:auto;padding:28px 32px}.hero{padding:28px 32px 24px}.hero-top{max-width:1120px;margin:auto}.account{max-width:1120px;margin:0 auto}nav{bottom:20px;width:min(calc(100% - 40px),1180px);border-radius:0 0 24px 24px}nav button{font-size:12px;gap:5px}}
+		@media(min-width:900px){.book-list,.station-list,.history-list{grid-template-columns:repeat(2,minmax(0,1fr))}.book-card{min-height:112px}.media-preview-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.media-preview-card img,.media-preview-card video{height:150px}.hero .account{display:grid;grid-template-columns:220px 1fr;align-items:center}.account-head{margin:0;border-right:1px solid #ffffff35;padding-right:18px}.stats{padding-left:12px}.two-col{gap:16px}.scanner{padding:22px}}
+		#reader{margin-top:12px;overflow:hidden;border-radius:12px}#reader video{object-fit:cover}
+		nav button{font-size:9px}
+		.media-actions{display:flex;flex-wrap:wrap;gap:8px}.media-preview-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:12px}.media-preview-card{border:1px solid var(--line);border-radius:12px;overflow:hidden}.media-preview-card img,.media-preview-card video{display:block;width:100%;height:130px;object-fit:cover;background:#edf2ef}.media-preview-card button{width:100%;border:0;background:#f6faf7;color:var(--green);padding:8px;font-size:11px;font-weight:700}.book-media{display:flex;gap:6px;overflow:auto;margin-top:8px}.book-media img,.book-media video{width:88px;height:68px;object-fit:cover;border-radius:8px;background:#edf2ef;flex:none}
+	</style>
+</head>
+<body>
+	<div class="app">
+		<header class="hero">
+			<div class="hero-top"><div><h1 class="brand">📚 書環 BookLoop</h1><p class="tagline">讓好書繼續旅行，讓循環更有價值</p></div><span class="demo">原型展示</span></div>
+			<div class="account">
+				<div class="between account-head"><span>我的綠色帳戶　ID: #TW88291</span></div>
+				<div class="stats">
+					<div class="stat"><small>可用環點</small><strong id="user-points">150</strong></div>
+					<div class="stat"><small>累積減碳量</small><strong><span id="user-carbon">2.04</span> <span>kg</span></strong></div>
+					<div class="stat"><small>書籍流轉數</small><strong><span id="user-cycles">2</span> <span>次</span></strong></div>
+				</div>
+			</div>
+		</header>
+		<main>
+			<section id="section-market" class="section active">
+				<div class="between"><h2 class="section-title">跨校共享書庫</h2><span class="coupon">🎟 企業免運券：2 張</span></div>
+				<p class="subtle">發現附近好書，讓閱讀與資源一起循環。</p>
+				<div id="book-list" class="book-list"></div>
+			</section>
+			<section id="section-scan" class="section">
+				<h2 class="section-title">ISBN 智慧快速建檔</h2>
+				<p class="subtle">輸入 ISBN 查詢書目，確認資料後即可上架。可填書籍位置，並在上架前新增書況照片／影片。首次上架贈 50 環點。</p>
+				<div class="scanner"><div class="camera-icon">▦</div><p>使用手機後鏡頭掃描書籍 ISBN 條碼，或手動輸入 ISBN 查詢</p><button class="btn btn-light" id="btn-start-scan" type="button">📷 開啟手機鏡頭掃描</button><div id="reader" hidden></div><div id="scan-status" class="status" role="status" aria-live="polite"></div></div>
+				<div class="form-card">
+					<div class="field"><label for="input-isbn">ISBN 條碼（支援 ISBN-10／ISBN-13）</label><div class="row" style="gap:8px"><input id="input-isbn" inputmode="numeric" placeholder="例如：9789864769261"><button class="btn" type="button" onclick="fetchBookInfo()">查詢書目</button></div></div>
+					<div class="field"><label for="input-title">書籍名稱</label><input id="input-title" placeholder="查詢後自動帶入"></div>
+					<div class="two-col"><div class="field"><label for="input-author">作者（可手動輸入中文）</label><input id="input-author" placeholder="例如：王小明"></div><div class="field"><label for="input-publisher">出版社（可手動輸入中文）</label><input id="input-publisher" placeholder="例如：天下文化"></div></div>
+					<div class="field"><label for="input-points">預估環點</label><input id="input-points" type="number" min="1" value="80"></div>
+					<div class="field"><label for="input-book-location">書籍目前位置（選填）</label><input id="input-book-location" placeholder="例如：台北市大安區／宿舍書架"></div>
+					<div class="field"><label for="input-location">交付地點</label><select id="input-location"><option value="">請先定位附近書箱站</option><option value="convenience">超商 C2C 店到店</option></select></div>
+					<div class="field">
+						<label>書況照片／影片（建議新增）</label>
+						<p class="subtle">上架前拍下書況，讓接手的人更了解書籍狀態。每本最多 5 個檔案、單檔 25 MB；媒體只暫存在本次瀏覽。</p>
+						<div class="media-actions">
+							<button class="btn btn-light" type="button" onclick="document.getElementById('capture-photo').click()">📷 拍照</button>
+							<button class="btn btn-light" type="button" onclick="document.getElementById('capture-video').click()">🎥 錄影</button>
+							<button class="btn btn-light" type="button" onclick="document.getElementById('select-media').click()">🖼 從相簿選取</button>
+						</div>
+						<input id="capture-photo" type="file" accept="image/*" capture="environment" hidden>
+						<input id="capture-video" type="file" accept="video/*" capture="environment" hidden>
+						<input id="select-media" type="file" accept="image/*,video/*" multiple hidden>
+						<div id="media-preview-grid" class="media-preview-grid" aria-live="polite"></div>
+					</div>
+					<button class="btn full" type="button" onclick="publishBook()">☘ 確認上架並建立綠色履歷（+50 環點）</button>
+				</div>
+			</section>
+			<section id="section-stations" class="section">
+				<div class="between"><h2 class="section-title">定點智慧書箱站</h2><button class="btn btn-small" onclick="locateNearestStation()" type="button">⌖ 定位最近站點</button></div>
+				<p class="subtle">假設全台大專校院及捷運站皆設有書箱，依 GPS 顯示最近 10 個校園／捷運站點；位置為示意座標。</p>
+				<div id="station-status" class="status"></div>
+				<div id="station-list" class="station-list"><div class="empty">點選「定位最近站點」搜尋附近校園與捷運站。</div></div>
+			</section>
+			<section id="section-profile" class="section">
+				<h2 class="section-title">書籍綠色履歷</h2><p class="subtle">查看你的共享紀錄與循環成果。</p>
+				<div class="notice"><strong>🌿 循環閱讀小知識</strong><br>每次成功流轉都讓書籍延長使用壽命。本頁減碳數據為原型示意，實際效益需依完整生命週期資料估算。</div>
+				<div id="history-list" class="history-list"></div>
+			</section>
+		</main>
+		<nav aria-label="主要導覽">
+			<button onclick="switchTab('market')" id="tab-market" class="active"><span class="icon">▤</span>共享書庫</button>
+			<button onclick="switchTab('scan')" id="tab-scan"><span class="icon">▦</span>掃碼建檔</button>
+			<button onclick="switchTab('stations')" id="tab-stations"><span class="icon">▣</span>智慧書箱</button>
+			<button onclick="switchTab('profile')" id="tab-profile"><span class="icon">♧</span>綠色履歷</button>
+		</nav>
+		<div id="toast" class="toast" role="status" aria-live="polite"></div>
+	</div>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+	<script>
+		let userPoints=150,userCarbon=2.04,userCycles=2;
+		let books=[
+			{id:1,isbn:'9789571383125',title:'原子習慣：細微改變帶來巨大成就的實證法則',author:'詹姆斯．克利爾',publisher:'方智',points:90,cycles:3,location:'台大總圖智慧書箱站',tone:''},
+			{id:2,isbn:'9789864769261',title:'Python 資料科學學習手冊',author:'Jake VanderPlas',publisher:'歐萊禮',points:120,cycles:2,location:'政大達賢智慧書箱站',tone:'blue'},
+			{id:3,isbn:'9789573339329',title:'也許你該找人聊聊',author:'蘿蕊．葛利布',publisher:'天下文化',points:75,cycles:1,location:'台大總圖智慧書箱站',tone:'orange'}
+		];
+		let history=[{title:'完成共享流轉',detail:'《原子習慣》・台大總圖智慧書箱站',date:'近期紀錄',points:'+30 環點'},{title:'綠色帳戶建立',detail:'BookLoop 原型體驗',date:'帳戶紀錄',points:'已加入'}];
+		function safe(value){return String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+		function renderBooks(){const list=document.getElementById('book-list');list.innerHTML=books.length?books.map((b,i)=>`<article class="book-card"><div class="cover ${b.tone||['','blue','orange'][i%3]}">📖</div><div class="book-info"><h3 class="book-title">${safe(b.title)}</h3><div class="book-meta">${safe(b.author)}${b.publisher?'／'+safe(b.publisher):''}<br>已流轉 ${b.cycles} 次${b.bookLocation?`<br>書籍位置：${safe(b.bookLocation)}`:''}</div>${b.media?.length?`<div class="book-media">${b.media.map(m=>m.kind==='video'?`<video src="${safe(m.url)}" controls playsinline aria-label="${safe(m.name)}"></video>`:`<img src="${safe(m.url)}" alt="${safe(m.name)}">`).join('')}</div>`:''}<div class="book-bottom"><span class="location">⌖ ${safe(b.location)}</span><span class="points">${b.points} 環點</span></div></div><button class="btn btn-small" onclick="requestBook(${Number(b.id)})">換書</button></article>`).join(''):'<div class="empty">目前沒有可借閱的書籍，歡迎上架分享！</div>'}
+		function renderStations(stations){document.getElementById('station-list').innerHTML=stations.length?stations.map((s,i)=>`<article class="station-card"><div class="station-icon">${s.type==='mrt'?'🚇':'▣'}</div><div class="station-text"><strong>${safe(s.name)}</strong><p>${s.type==='mrt'?'捷運站書箱（原型假設）':'校園書箱（原型假設）'}</p></div><span class="badge">${i===0?'最近 · ':''}${Number(s.distanceKm).toFixed(1)} 公里</span></article>`).join(''):'<div class="empty">目前沒有可顯示的站點。</div>'}
+		let nearestStations=[];
+		function renderDeliveryOptions(stations){nearestStations=stations;const select=document.getElementById('input-location');select.innerHTML=stations.map((s,i)=>`<option value="station-${i}">${s.type==='mrt'?'捷運':'校園'}書箱：${safe(s.name)}（${Number(s.distanceKm).toFixed(1)} 公里）</option>`).join('')+'<option value="convenience">超商 C2C 店到店</option>';select.value=stations.length?'station-0':'convenience'}
+		function getDeliveryLocation(){const select=document.getElementById('input-location');if(select.value==='convenience')return '超商 C2C 店到店';const index=Number(select.value.replace('station-',''));const station=nearestStations[index];return station?`${station.type==='mrt'?'捷運':'校園'}書箱：${station.name}`:''}
+		function renderHistory(){document.getElementById('history-list').innerHTML=history.map(h=>`<article class="history-card"><div class="between"><strong>${safe(h.title)}</strong><span class="points">${safe(h.points)}</span></div><p>${safe(h.detail)}</p><span class="book-meta">${safe(h.date)}</span></article>`).join('')}
+		function updateAccount(){document.getElementById('user-points').textContent=userPoints;document.getElementById('user-carbon').textContent=userCarbon.toFixed(2);document.getElementById('user-cycles').textContent=userCycles}
+		function switchTab(name){document.querySelectorAll('.section').forEach(s=>s.classList.toggle('active',s.id==='section-'+name));document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.id==='tab-'+name));window.scrollTo({top:0,behavior:'smooth'})}
+		let toastTimer;function toast(message){const el=document.getElementById('toast');el.textContent=message;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2600)}
+		function normalizeIsbn(value){return String(value).trim().replace(/[-\s]/g,'').toUpperCase()}
+		async function lookupBookDatabase(isbn){
+			const response=await fetch(`/api/books?isbn=${encodeURIComponent(isbn)}`);
+			if(!response.headers.get('content-type')?.includes('application/json'))throw new Error('Book metadata service is unavailable');
+			const data=await response.json();
+			if(response.status===404)return null;
+			if(!response.ok)throw new Error(data.error||`Book metadata request failed (${response.status})`);
+			return data;
+		}
+		async function fetchBookInfo(){
+			const input=document.getElementById('input-isbn'),isbn=normalizeIsbn(input.value);
+			if(!/^(?:\d{13}|\d{9}[\dX])$/.test(isbn)){toast('請輸入有效的 10 或 13 碼 ISBN');return}
+			input.value=isbn;
+			toast('正在查詢書目資料…');
+			try{
+				const book=await lookupBookDatabase(isbn);
+				if(!book){toast('資料庫找不到此 ISBN，請手動填寫書名與作者');return}
+				document.getElementById('input-title').value=book.title;document.getElementById('input-author').value=book.author||'';document.getElementById('input-publisher').value=book.publisher||'';document.getElementById('input-points').value=book.points||80;
+				const missing=[];
+				if(!book.author)missing.push('作者');
+				if(!book.publisher)missing.push('出版社');
+				toast(missing.length?`已帶入書名；資料庫未提供${missing.join('、')}，請手動輸入中文名稱`:'已自動帶入書名、中文／原始作者與出版社');
+			}catch(error){
+				console.error('ISBN lookup failed',error);
+				toast('書目資料庫連線失敗，請以 python3 server.py 啟動網站後重試');
+			}
+		}
+		let pendingMedia=[],nextMediaId=1;
+		function renderMediaPreview(){const grid=document.getElementById('media-preview-grid');grid.innerHTML=pendingMedia.length?pendingMedia.map(media=>`<div class="media-preview-card">${media.kind==='video'?`<video src="${safe(media.url)}" controls playsinline></video>`:`<img src="${safe(media.url)}" alt="${safe(media.name)}">`}<button type="button" onclick="removePendingMedia(${media.id})">移除 ${safe(media.name)}</button></div>`).join(''):'<div class="empty">尚未新增，建議上架前先拍下書況照片或影片。</div>'}
+		function addMediaFiles(files){let added=0,problem='';for(const file of Array.from(files||[])){if(pendingMedia.length>=5){problem='一次上架最多附加 5 個照片或影片。';break}if(!file.type.startsWith('image/')&&!file.type.startsWith('video/')){problem='只接受照片或影片檔案。';continue}if(file.size>25*1024*1024){problem='單一檔案不可超過 25 MB。';continue}pendingMedia.push({id:nextMediaId++,name:file.name,kind:file.type.startsWith('video/')?'video':'image',url:URL.createObjectURL(file)});added++}renderMediaPreview();if(problem)toast(problem);else if(added)toast(`已新增 ${added} 個書況媒體檔`)}
+		function removePendingMedia(id){const media=pendingMedia.find(item=>item.id===id);if(media)URL.revokeObjectURL(media.url);pendingMedia=pendingMedia.filter(item=>item.id!==id);renderMediaPreview()}
+		['capture-photo','capture-video','select-media'].forEach(id=>{const input=document.getElementById(id);input.addEventListener('change',()=>{addMediaFiles(input.files);input.value=''})});
+		function publishBook(){
+			const isbn=document.getElementById('input-isbn').value.trim().replace(/[-\s]/g,'');
+			const title=document.getElementById('input-title').value.trim();
+			const author=document.getElementById('input-author').value.trim();
+			const publisher=document.getElementById('input-publisher').value.trim();
+			const points=Math.max(1,Number(document.getElementById('input-points').value)||80);
+			const location=getDeliveryLocation();
+			const bookLocation=document.getElementById('input-book-location').value.trim();
+			if(!title||!author){toast('請先輸入書名與作者');return}
+			if(!location){toast('請先定位並選擇最近書箱站，或選擇超商交付');return}
+			const media=pendingMedia.map(({name,kind,url})=>({name,kind,url}));
+			books.unshift({id:Date.now(),isbn,title,author,publisher,points,cycles:0,location,bookLocation,media,tone:'green'});
+			userPoints+=50;history.unshift({title:'新書上架',detail:`《${title}》・${location}`,date:'剛剛',points:'+50 環點'});
+			renderBooks();renderHistory();updateAccount();
+			document.getElementById('input-isbn').value='';document.getElementById('input-title').value='';document.getElementById('input-author').value='';document.getElementById('input-publisher').value='';document.getElementById('input-book-location').value='';document.getElementById('input-points').value=80;
+			pendingMedia=[];renderMediaPreview();toast('上架成功，已加入 50 環點');
+		}
+		function requestBook(id){const book=books.find(b=>b.id===id);if(!book)return;if(userPoints<book.points){toast('環點不足，先上架分享書籍即可累積環點');return}userPoints-=book.points;userCycles++;userCarbon+=1.02;history.unshift({title:'完成書籍交換',detail:`《${book.title}》・${book.location}`,date:'剛剛',points:`-${book.points} 環點`});book.media?.forEach(media=>URL.revokeObjectURL(media.url));books=books.filter(b=>b.id!==id);renderBooks();renderHistory();updateAccount();toast('交換申請已建立（原型示意）')}
+		async function locateNearestStation(){const status=document.getElementById('station-status');status.classList.add('show');if(!navigator.geolocation){status.textContent='此裝置不支援定位，請改用支援定位的瀏覽器。';return}status.textContent='正在取得位置…';navigator.geolocation.getCurrentPosition(async({coords})=>{status.textContent='定位成功，正在搜尋全台校園與捷運站…';try{const query=new URLSearchParams({lat:coords.latitude,lng:coords.longitude});const response=await fetch(`/api/stations?${query}`);const data=await response.json();if(!response.ok)throw new Error(data.error||`Station lookup failed (${response.status})`);renderStations(data.stations);renderDeliveryOptions(data.stations);status.textContent=`已搜尋 ${data.universityCount} 所大專校院與 ${data.mrtCount} 個捷運站，顯示最近 ${data.stations.length} 個站點。書箱位置為原型假設。`}catch(error){console.error('Station lookup failed',error);status.textContent='無法取得學校或捷運站資料，請稍後重試。'}},()=>{status.textContent='無法取得定位，請允許瀏覽器使用位置資訊。'},{enableHighAccuracy:true,timeout:10000,maximumAge:60000})}
+		let isbnScanner=null,scanResultHandled=false;
+		const scanButton=document.getElementById('btn-start-scan');
+		const scanStatus=document.getElementById('scan-status');
+		async function stopIsbnScan(){const scanner=isbnScanner;if(!scanner)return;if(scanner.isScanning)await scanner.stop();scanner.clear();isbnScanner=null;document.getElementById('reader').hidden=true;scanButton.disabled=false;scanButton.textContent='📷 開啟手機鏡頭掃描'}
+		async function startIsbnScan(){
+			if(isbnScanner){await stopIsbnScan();scanStatus.textContent='已停止掃描。';scanStatus.classList.add('show');return}
+			if(!window.Html5Qrcode){scanStatus.textContent='掃描器載入失敗，請確認網路連線後重新整理頁面，或手動輸入 ISBN。';scanStatus.classList.add('show');return}
+			const reader=document.getElementById('reader');
+			const scanner=new Html5Qrcode('reader');
+			isbnScanner=scanner;scanResultHandled=false;reader.hidden=false;scanButton.disabled=true;scanButton.textContent='正在啟動相機…';
+			scanStatus.textContent='請允許相機權限，將 ISBN 條碼橫放在框內；掃到後會自動輸入並查書。';scanStatus.classList.add('show');
+			try{
+				await scanner.start(
+					{facingMode:{ideal:'environment'}},
+					{
+						fps:15,
+						qrbox:(viewfinderWidth,viewfinderHeight)=>({
+							width:Math.floor(viewfinderWidth*0.82),
+							height:Math.floor(Math.min(viewfinderHeight*0.30,160))
+						}),
+						aspectRatio:1.777778,
+						experimentalFeatures:{useBarCodeDetectorIfSupported:true},
+						videoConstraints:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}}
+					},
+					async decodedText=>{
+					if(scanResultHandled)return;
+					const isbn=decodedText.trim().replace(/[^0-9X]/gi,'').toUpperCase();
+					if(!/^(?:\d{10}|\d{13})$/.test(isbn)){scanStatus.textContent='讀到的不是有效 ISBN 條碼，請將完整 ISBN 條碼移近鏡頭。';return}
+					scanResultHandled=true;document.getElementById('input-isbn').value=isbn;
+					scanStatus.textContent=`已掃到 ISBN ${isbn}，正在輸入並查詢書目…`;
+					await stopIsbnScan();
+					await fetchBookInfo();
+				},()=>{});
+				if(isbnScanner===scanner){scanButton.disabled=false;scanButton.textContent='⏹ 停止掃描'}
+			}catch(error){
+				if(isbnScanner===scanner){isbnScanner=null;reader.hidden=true;scanner.clear();scanButton.disabled=false;scanButton.textContent='📷 開啟手機鏡頭掃描'}
+				scanStatus.textContent='無法啟動相機。請允許瀏覽器使用相機，並透過 HTTPS 或 localhost 開啟此頁面。';
+			}
+		}
+		scanButton.addEventListener('click',startIsbnScan);
+		renderBooks();renderHistory();updateAccount();renderMediaPreview();
+	</script>
+</body>
+</html>
+
