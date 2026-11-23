@@ -299,7 +299,7 @@
 		let history=[{title:'綠色帳戶建立',detail:'BookLoop 原型體驗',date:'帳戶紀錄',points:'已加入'}];
 		function safe(value){return String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 		function renderBookCards(items,emptyMessage){
-			return items.length?items.map((b,i)=>`<article class="book-card"><div class="cover ${b.tone||['','blue','orange'][i%3]}">📖</div><div class="book-info"><h3 class="book-title">${safe(b.title)}</h3><div class="book-meta">${safe(b.author)}${b.publisher?'／'+safe(b.publisher):''}<br>已流轉 ${b.cycles} 次 · ${conditionLabels[b.condition]||'書況未標示'} · ${regionLabels[b.region]||'區域未標示'} · ${languageLabels[b.language]||'語言未標示'}${b.bookLocation?`<br>書籍位置：${safe(b.bookLocation)}`:''}<br>賣方：${safe(b.sellerName||'書友')}</div>${b.media?.length?`<div class="book-media">${b.media.map(m=>m.kind==='video'?`<video src="${safe(m.url)}" controls playsinline aria-label="${safe(m.name)}"></video>`:`<img src="${safe(m.url)}" alt="${safe(m.name)}">`).join('')}</div>`:''}<div class="book-bottom"><span class="location">⌖ ${safe(b.location)}</span><span class="points">${b.points} 環點</span></div></div><div class="book-card-actions"><button class="btn btn-small" type="button" onclick="openTradeOptions(${Number(b.id)})">交易方式</button><button class="btn btn-light btn-small" type="button" onclick="addBookToWishlist(${Number(b.id)})">♡ 想要</button></div></article>`).join(''):`<div class="empty">${emptyMessage}</div>`;
+			return items.length?items.map((b,i)=>`<article class="book-card"><div class="cover ${b.tone||['','blue','orange'][i%3]}">📖</div><div class="book-info"><h3 class="book-title">${safe(b.title)}</h3><div class="book-meta">${safe(b.author)}${b.publisher?'／'+safe(b.publisher):''}<br>已流轉 ${b.cycles} 次 · ${conditionLabels[b.condition]||'書況未標示'} · ${regionLabels[b.region]||'區域未標示'} · ${languageLabels[b.language]||'語言未標示'}${b.bookLocation?`<br>書籍位置：${safe(b.bookLocation)}`:''}<br>賣方：${safe(b.sellerName||'書友')}</div>${b.media?.length?`<div class="book-media">${b.media.map(m=>m.kind==='video'?`<video src="${safe(m.url)}" controls playsinline aria-label="${safe(m.name)}"></video>`:`<img src="${safe(m.url)}" alt="${safe(m.name)}">`).join('')}</div>`:''}<div class="book-bottom"><span class="location">⌖ ${safe(b.location)}</span><span class="points">${b.points} 環點</span></div></div><div class="book-card-actions"><button class="btn btn-small" type="button" data-trade-book-id="${safe(b.id)}">交易方式</button><button class="btn btn-light btn-small" type="button" onclick="addBookToWishlist(${Number(b.id)})">♡ 想要</button></div></article>`).join(''):`<div class="empty">${emptyMessage}</div>`;
 		}
 		function renderBooks(){
 			const availableBooks=books.filter(book=>!book.reservedBy);
@@ -419,7 +419,7 @@
 			const matches=new Map();
 			wishes.forEach(wish=>books.filter(book=>!book.reservedBy).forEach(book=>{const score=matchScore(wish,book);if(score>0&&(!matches.has(book.id)||matches.get(book.id).score<score))matches.set(book.id,{book,score,wish})}));
 			const sorted=[...matches.values()].sort((a,b)=>b.score-a.score);
-			document.getElementById('wishlist-matches').innerHTML=sorted.length?sorted.map(({book,score,wish})=>`<article class="wishlist-item"><div class="between"><strong>${score>=10?'高度':'可能'}符合：${safe(book.title)}</strong><span class="badge">${safe(wish.title)}</span></div><div class="book-meta">願望媒合原型 · ${safe(book.sellerName||'書友')}的在架書</div><div class="trade-actions"><button class="btn btn-small" type="button" onclick="openTradeOptions(${Number(book.id)})">洽談交易</button></div></article>`).join(''):'<div class="empty">目前沒有符合公開願望的在架書籍。</div>';
+			document.getElementById('wishlist-matches').innerHTML=sorted.length?sorted.map(({book,score,wish})=>`<article class="wishlist-item"><div class="between"><strong>${score>=10?'高度':'可能'}符合：${safe(book.title)}</strong><span class="badge">${safe(wish.title)}</span></div><div class="book-meta">願望媒合原型 · ${safe(book.sellerName||'書友')}的在架書</div><div class="trade-actions"><button class="btn btn-small" type="button" data-trade-book-id="${safe(book.id)}">洽談交易</button></div></article>`).join(''):'<div class="empty">目前沒有符合公開願望的在架書籍。</div>';
 		}
 		function matchScore(wish,book){
 			const isbn=String(wish.isbn||'').replace(/[-\s]/g,'').toLowerCase();
@@ -494,13 +494,15 @@
 			if(expired)persistPrototypeState();
 		}
 		function openTradeOptions(bookId){
-			const book=books.find(item=>item.id===bookId);if(!book||book.reservedBy)return;
+			const book=books.find(item=>String(item.id)===String(bookId));
+			if(!book){toast('找不到這本書，請重新整理頁面後再試');return}
+			if(book.reservedBy){toast('這本書已有人洽談，請重新整理書庫');return}
 			if(book.cycles>=MAX_BOOK_CYCLES){toast(`此書已達 ${MAX_BOOK_CYCLES} 次流轉上限`);return}
-			activeTradeBookId=bookId;transactionRenderKey='';document.getElementById('trade-book-title').textContent=`《${book.title}》 · ${book.points} 環點`;
+			activeTradeBookId=book.id;transactionRenderKey='';document.getElementById('trade-book-title').textContent=`《${book.title}》 · ${book.points} 環點`;
 			activeTradeMode='swap';document.querySelector('input[name="trade-mode"][value="swap"]').checked=true;
 			showTradeModal();
 		}
-		function showTradeModal(){const modal=document.getElementById('trade-modal');modal.setAttribute('aria-hidden','false');modal.classList.add('show');modal.style.display='flex'}
+		function showTradeModal(){const modal=document.getElementById('trade-modal');if(modal.parentElement!==document.body)document.body.appendChild(modal);modal.setAttribute('aria-hidden','false');modal.classList.add('show');modal.style.display='flex'}
 		function hideTradeModal(){const modal=document.getElementById('trade-modal');modal.classList.remove('show');modal.style.display='none';modal.setAttribute('aria-hidden','true')}
 		function closeTradeModal(){hideTradeModal();activeTradeBookId=null;transactionRenderKey=''}
 		function continueToTransaction(){
@@ -1185,6 +1187,10 @@
 			}
 		}
 		scanButton.addEventListener('click',startIsbnScan);
+		document.addEventListener('click',event=>{
+			const target=event.target instanceof Element?event.target.closest('[data-trade-book-id]'):null;
+			if(target)openTradeOptions(target.dataset.tradeBookId);
+		});
 		loadPrototypeState();
 		const savedUser=localStorage.getItem('bookloop-user');
 		if(savedUser)currentUser={name:savedUser,provider:savedUser};
