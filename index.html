@@ -494,7 +494,6 @@
 			if(expired)persistPrototypeState();
 		}
 		function openTradeOptions(bookId){
-			if(!requireAuth())return;
 			const book=books.find(item=>item.id===bookId);if(!book||book.reservedBy)return;
 			if(book.cycles>=MAX_BOOK_CYCLES){toast(`此書已達 ${MAX_BOOK_CYCLES} 次流轉上限`);return}
 			activeTradeBookId=bookId;transactionRenderKey='';document.getElementById('trade-book-title').textContent=`《${book.title}》 · ${book.points} 環點`;
@@ -503,6 +502,7 @@
 		function closeTradeModal(){document.getElementById('trade-modal').classList.remove('show');activeTradeBookId=null;transactionRenderKey=''}
 		function continueToTransaction(){
 			const book=books.find(item=>item.id===activeTradeBookId);if(!book||book.reservedBy)return;
+			if(!requireAuth())return;
 			activeTradeMode=document.querySelector('input[name="trade-mode"]:checked')?.value||'swap';
 			document.getElementById('trade-modal').classList.remove('show');
 			switchTab('transaction');
@@ -779,6 +779,7 @@
 				const days=document.getElementById('admin-days').value;
 				const response=await fetch(`/api/admin/analytics?days=${encodeURIComponent(days)}`,{cache:'no-store',credentials:'same-origin'});
 				if(response.status===401){loginCard.hidden=false;return}
+				if(response.status===404||response.status===405)throw new Error('admin_backend_unavailable');
 				if(!response.ok)throw new Error(`Analytics request failed (${response.status})`);
 				const data=await response.json();
 				renderAdminAnalytics(data);
@@ -787,7 +788,7 @@
 			}catch(error){
 				console.error('Admin analytics could not be loaded',error);
 				loginCard.hidden=false;
-				adminStatus('admin-login-status','無法連線至平台數據服務，請確認後端已啟動並與此網站同源部署。',true);
+				adminStatus('admin-login-status',error.message==='admin_backend_unavailable'?'目前網站沒有平台管理 API。請用同源部署的 Python 後端開啟；GitHub Pages 與靜態預覽無法提供管理員登入。':'無法連線至平台數據服務，請確認後端已啟動並與此網站同源部署。',true);
 			}
 		}
 		async function adminLogin(event){
@@ -795,6 +796,7 @@
 			const password=document.getElementById('admin-password');
 			try{
 				const response=await fetch('/api/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({password:password.value})});
+				if(response.status===404||response.status===405)throw new Error('admin_backend_unavailable');
 				const result=await response.json();
 				if(!response.ok)throw new Error(result.error||`Login failed (${response.status})`);
 				password.value='';
@@ -802,7 +804,7 @@
 				await loadAdminAnalytics();
 			}catch(error){
 				console.error('Admin login failed',error);
-				adminStatus('admin-login-status',error.message==='invalid_admin_credentials'?'管理員密碼不正確。':error.message==='admin_password_not_configured'?'伺服器尚未設定安全的管理員密碼。':'登入失敗，請確認密碼或後端連線。',true);
+				adminStatus('admin-login-status',error.message==='admin_backend_unavailable'?'目前網站沒有平台管理 API。請用同源部署的 Python 後端開啟；GitHub Pages 與靜態預覽無法提供管理員登入。':error.message==='invalid_admin_credentials'?'管理員密碼不正確。':error.message==='admin_password_not_configured'?'伺服器尚未設定安全的管理員密碼。':'登入失敗，請確認密碼或後端連線。',true);
 			}
 		}
 		async function adminLogout(){
