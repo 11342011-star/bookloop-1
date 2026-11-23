@@ -32,3 +32,11 @@ paid-pickup event, and only records circulation rewards after settlement.
 Production transactions require a backend, a real payment/top-up provider, and
 authenticated, verified C2C fulfillment webhooks. Client-side controls must
 never be treated as payment or pickup proof.
+
+## External bookstore links
+
+When a BookLoop search has no in-stock match, users can search the title, author,
+or ISBN on Books.com.tw, Eslite, Kingstone, and TAAZE. These are outbound search
+links only; BookLoop does not fetch or guarantee retailer inventory or prices.
+Affiliate IDs, click tracking, and paid-ad integrations are not configured in
+this prototype.
