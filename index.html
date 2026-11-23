@@ -17,6 +17,7 @@
 		nav button{font-size:9px}
 		.media-actions{display:flex;flex-wrap:wrap;gap:8px}.media-preview-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:12px}.media-preview-card{border:1px solid var(--line);border-radius:12px;overflow:hidden}.media-preview-card img,.media-preview-card video{display:block;width:100%;height:130px;object-fit:cover;background:#edf2ef}.media-preview-card button{width:100%;border:0;background:#f6faf7;color:var(--green);padding:8px;font-size:11px;font-weight:700}.book-media{display:flex;gap:6px;overflow:auto;margin-top:8px}.book-media img,.book-media video{width:88px;height:68px;object-fit:cover;border-radius:8px;background:#edf2ef;flex:none}
 		.point-estimate{border:1px solid #b8ddc7;border-radius:12px;background:#f3faf6;padding:11px}.point-estimate-head{display:flex;align-items:center;justify-content:space-between;gap:8px}.point-estimate strong{color:var(--green);font-size:18px}.point-estimate ul{margin:7px 0 0;padding-left:18px;color:var(--muted);font-size:11px;line-height:1.7}
+		.book-cover-preview{display:flex;align-items:center;gap:10px;padding:10px;border:1px solid var(--line);border-radius:12px;background:#f8fbf9}.book-cover-preview img{width:58px;height:78px;object-fit:cover;border-radius:6px;background:#edf2ef}.book-cover-preview span{font-size:12px;color:var(--muted)}
 		.retailer-card{border:1px solid var(--line);border-radius:14px;padding:13px;background:#fff}.retailer-card .between{gap:10px}.retailer-link{display:block;text-align:center;text-decoration:none;margin-top:10px}
 		.condition-checks{display:grid;gap:8px;margin:12px 0}.condition-check-row{display:grid;grid-template-columns:74px repeat(3,1fr);align-items:center;gap:6px;border:1px solid var(--line);border-radius:10px;padding:9px}.condition-check-row>span{font-size:12px;font-weight:700}.condition-check-row label{font-size:11px;text-align:center;cursor:pointer}.condition-check-row input{margin-right:3px}
 		.auth-modal,.flow-modal{display:none;position:fixed;inset:0;z-index:20;background:#10251ab8;align-items:center;justify-content:center;padding:18px}.auth-modal.show,.flow-modal.show{display:flex}.auth-panel,.flow-panel{width:min(100%,480px);max-height:calc(100vh - 36px);overflow:auto;background:#fff;border-radius:20px;padding:20px;box-shadow:0 20px 60px #10251a40}.auth-panel h2,.flow-panel h2{margin:0;font-size:20px}.auth-panel>.subtle,.flow-panel>.subtle{margin-bottom:14px}.auth-provider{width:100%;margin-top:8px;border:1px solid #dce5df;border-radius:11px;background:#fff;color:var(--ink);padding:11px 12px;font-weight:700}.auth-provider.google{border-color:#b8c7bf}.auth-provider.apple{background:#17231e;color:#fff;border-color:#17231e}.auth-divider{text-align:center;color:var(--muted);font-size:11px;margin:14px 0 8px}.phone-auth{display:grid;gap:8px}.phone-row{display:grid;grid-template-columns:92px 1fr;gap:8px}.auth-actions,.trade-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.auth-actions button,.trade-actions button{flex:1}.auth-close{border:0;background:transparent;color:var(--muted);font-size:22px;line-height:1;padding:3px}.guest-account{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}.guest-account .stats{min-width:0}.inline-label{display:flex;align-items:center;gap:8px;font-size:12px}.inline-label input{width:auto}.prototype-note{border:1px dashed #e2c76f;border-radius:12px;background:#fff9e8;padding:11px;color:#705914;font-size:11px;line-height:1.65}.wishlist-item,.order-card,.public-wishlist{border:1px solid var(--line);border-radius:14px;padding:12px;background:#fff}.wishlist-list,.order-list,.public-wishlist-list,.match-list{display:grid;gap:10px;margin-top:12px}.wishlist-item .between,.order-card .between{gap:8px}.order-actions{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}.order-actions .btn{flex:1}.chat-messages{display:grid;gap:8px;max-height:230px;overflow:auto;margin:14px 0}.chat-message{background:#f2f7f3;border-radius:12px;padding:9px 11px;font-size:12px;line-height:1.5}.chat-message.mine{background:var(--mint);margin-left:20px}.wallet-balance{font-size:26px;font-weight:750;color:var(--green)}.badge.warning{background:#fff3d3;color:#705914}.book-card-actions{display:grid;gap:6px;flex:none}.book-card-actions .btn{white-space:nowrap;padding:7px 8px}
@@ -115,6 +116,7 @@
 					<div class="field"><label for="input-isbn">ISBN 條碼（支援 ISBN-10／ISBN-13）</label><div class="row" style="gap:8px"><input id="input-isbn" inputmode="numeric" placeholder="例如：9789864769261"><button class="btn" type="button" onclick="fetchBookInfo()">查詢書目</button></div></div>
 					<div class="field"><label for="input-title">書籍名稱</label><input id="input-title" placeholder="查詢後自動帶入"></div>
 					<div class="two-col"><div class="field"><label for="input-author">作者（可手動輸入中文）</label><input id="input-author" placeholder="例如：王小明"></div><div class="field"><label for="input-publisher">出版社（可手動輸入中文）</label><input id="input-publisher" placeholder="例如：天下文化"></div></div>
+					<div id="book-cover-preview" class="book-cover-preview" hidden><img id="book-cover-image" alt="書籍封面預覽"><span>書籍封面預覽</span></div>
 					<div class="two-col">
 						<div class="field"><label for="input-points">預估環點</label><input id="input-points" type="number" min="40" max="180" onchange="updatePointEstimate()"></div>
 						<div class="field"><label for="input-cycles">目前流轉次數（上限 8 次）</label><input id="input-cycles" type="number" min="0" max="8" value="0" onchange="updatePointEstimate()"></div>
@@ -641,7 +643,15 @@
 			window.scrollTo({top:0,behavior:'smooth'});
 		}
 		let toastTimer;function toast(message){const el=document.getElementById('toast');el.textContent=message;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2600)}
-		function normalizeIsbn(value){return String(value).trim().replace(/[-\s]/g,'').toUpperCase()}
+		function normalizeIsbn(value){return String(value).replace(/[^0-9X]/gi,'').toUpperCase()}
+		function safeCoverUrl(value){
+			if(!value)return '';
+			try{
+				const url=new URL(value.replace(/^http:/i,'https:'));
+				return url.protocol==='https:'&&['books.google.com','books.googleusercontent.com','covers.openlibrary.org'].includes(url.hostname)?url.href:'';
+			}catch{return ''}
+		}
+		// Optional public key: restrict its referrer to this GitHub Pages domain.
 		const GOOGLE_BOOKS_API_KEY='';
 		function isbnVariants(isbn){
 			const variants=new Set([isbn]);
@@ -667,7 +677,7 @@
 			if(GOOGLE_BOOKS_API_KEY)params.set('key',GOOGLE_BOOKS_API_KEY);
 			const response=await fetch(`https://www.googleapis.com/books/v1/volumes?${params}`);
 			if(!response.ok){
-				if(response.status===429)throw new Error('google_books_quota_exceeded');
+				if(response.status===429||response.status===403)throw new Error('google_books_quota_exceeded');
 				throw new Error(`Google Books lookup failed (${response.status})`);
 			}
 			const data=await response.json();
@@ -678,7 +688,7 @@
 			if(!volume)return null;
 			const info=volume.volumeInfo||{};
 			if(!info.title)return null;
-			return {title:info.title,author:(info.authors||[]).join(', '),publisher:info.publisher||''};
+			return {title:info.title,author:(info.authors||[]).join(', '),publisher:info.publisher||'',cover:info.imageLinks?.thumbnail||info.imageLinks?.smallThumbnail||''};
 		}
 		let googleBooksCallbackId=0;
 		function lookupGoogleBooksFeed(isbn){
@@ -711,7 +721,8 @@
 				return {
 					title:entry.title?.$t||'',
 					author:(entry['dc$creator']||[]).map(item=>item.$t).filter(Boolean).join(', '),
-					publisher:(entry['dc$publisher']||[]).map(item=>item.$t).filter(Boolean).join(', ')
+					publisher:(entry['dc$publisher']||[]).map(item=>item.$t).filter(Boolean).join(', '),
+					cover:entry['gbs$thumbnail']?.url||''
 				};
 			});
 		}
@@ -719,25 +730,7 @@
 			const errors=[];
 			for(const variant of isbnVariants(isbn)){
 				try{
-					const bibkey=`ISBN:${variant}`;
-					const params=new URLSearchParams({bibkeys:bibkey,format:'json',jscmd:'data'});
-					const response=await fetch(`https://openlibrary.org/api/books?${params}`);
-					if(!response.ok)throw new Error(`Open Library lookup failed (${response.status})`);
-					const data=await response.json();
-					const edition=data[bibkey];
-					if(edition?.title)return {
-						title:edition.title,
-						author:(edition.authors||[]).map(author=>author.name).filter(Boolean).join(', '),
-						publisher:(edition.publishers||[]).map(publisher=>publisher.name).filter(Boolean).join(', ')
-					};
-				}catch(error){
-					console.error('Open Library edition lookup failed',error);
-					errors.push(error);
-				}
-			}
-			for(const variant of isbnVariants(isbn)){
-				try{
-					const params=new URLSearchParams({isbn:variant,limit:'5',fields:'title,author_name,publisher,isbn'});
+					const params=new URLSearchParams({isbn:variant,limit:'5',fields:'title,author_name,publisher,isbn,cover_i'});
 					const response=await fetch(`https://openlibrary.org/search.json?${params}`);
 					if(!response.ok)throw new Error(`Open Library lookup failed (${response.status})`);
 					const data=await response.json();
@@ -745,18 +738,19 @@
 					if(book?.title)return {
 						title:book.title,
 						author:(book.author_name||[]).join(', '),
-						publisher:(book.publisher||[])[0]||''
+						publisher:(book.publisher||[])[0]||'',
+						cover:book.cover_i?`https://covers.openlibrary.org/b/id/${book.cover_i}-M.jpg`:''
 					};
 				}catch(error){
 					console.error('Open Library search lookup failed',error);
 					errors.push(error);
 				}
 			}
-			if(errors.length===isbnVariants(isbn).length*2)throw new Error('Open Library lookup failed');
+			if(errors.length===isbnVariants(isbn).length)throw new Error('Open Library lookup failed');
 			return null;
 		}
 		async function lookupBookDatabase(isbn){
-			const result={title:'',author:'',publisher:''};
+			const result={title:'',author:'',publisher:'',cover:''};
 			const errors=[];
 			for(const lookup of [lookupGoogleBooks,lookupGoogleBooksFeed,lookupOpenLibrary]){
 				try{
@@ -818,11 +812,20 @@
 			const input=document.getElementById('input-isbn'),isbn=normalizeIsbn(input.value);
 			if(!/^(?:\d{13}|\d{9}[\dX])$/.test(isbn)){toast('請輸入有效的 10 或 13 碼 ISBN');return}
 			input.value=isbn;
+			document.getElementById('book-cover-preview').hidden=true;
+			document.getElementById('book-cover-image').removeAttribute('src');
 			toast('正在查詢書目資料…');
 			try{
 				const book=await lookupBookDatabase(isbn);
 				if(!book){toast('Google Books 與 Open Library 都找不到此 ISBN，請手動輸入書名與作者');return}
 				document.getElementById('input-title').value=book.title;document.getElementById('input-author').value=book.author||'';document.getElementById('input-publisher').value=book.publisher||'';
+				const coverUrl=safeCoverUrl(book.cover);
+				if(coverUrl){
+					const coverImage=document.getElementById('book-cover-image');
+					coverImage.src=coverUrl;
+					coverImage.onerror=()=>{coverImage.removeAttribute('src');document.getElementById('book-cover-preview').hidden=true};
+					document.getElementById('book-cover-preview').hidden=false;
+				}
 				await updatePointEstimate();
 				const missing=[];
 				if(!book.author)missing.push('作者');
@@ -831,7 +834,7 @@
 			}catch(error){
 				console.error('ISBN lookup failed',error);
 				const message=error.message==='google_books_quota_exceeded'
-					?'Google Books 每日查詢額度已用完。請設定只允許此 GitHub Pages 網域使用的 API key，或等額度重設後再試。'
+					?'Google Books 額度或金鑰權限受限，已嘗試其他書目來源；請設定只允許此 GitHub Pages 網域使用的 API key。'
 					:error instanceof TypeError
 					?'無法連線到書目服務，請檢查網路後重試，或手動輸入書目。'
 					:error.message==='metadata_sources_unavailable'
