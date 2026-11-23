@@ -572,6 +572,43 @@
 		function getDeliveryLocation(){const select=document.getElementById('input-location');if(select.value==='convenience')return '超商 C2C 店到店';const index=Number(select.value.replace('station-',''));const station=nearestStations[index];return station?`${station.type==='mrt'?'捷運':'校園'}書箱：${station.name}`:''}
 		function renderHistory(){document.getElementById('history-list').innerHTML=history.map(h=>`<article class="history-card"><div class="between"><strong>${safe(h.title)}</strong><span class="points">${safe(h.points)}</span></div><p>${safe(h.detail)}</p><span class="book-meta">${safe(h.date)}</span></article>`).join('')}
 		function updateAccount(){expirePromotionalPoints();const points=availablePoints();document.getElementById('user-points').textContent=points;document.getElementById('user-carbon').textContent=userCarbon.toFixed(2);document.getElementById('user-cycles').textContent=userCycles;document.getElementById('wallet-points').textContent=points;document.getElementById('seller-account-points').textContent=sellerBalances[currentAccountId()]||0;document.getElementById('coupon-count').textContent=userCoupons}
+		let stationLocationsPromise=null;
+		async function loadStationLocations(){
+			if(!stationLocationsPromise){
+				stationLocationsPromise=Promise.all([
+					fetch(new URL('university_locations.json',document.baseURI)),
+					fetch(new URL('mrt_station_locations.json',document.baseURI))
+				]).then(async([universityResponse,mrtResponse])=>{
+					if(!universityResponse.ok||!mrtResponse.ok)throw new Error('Station location files could not be loaded');
+					const [universityData,mrtData]=await Promise.all([universityResponse.json(),mrtResponse.json()]);
+					if(!Array.isArray(universityData.schools)||!Array.isArray(mrtData.stations))throw new Error('Station location files have an invalid format');
+					return {
+						schools:universityData.schools,
+						stations:mrtData.stations
+					};
+				}).catch(error=>{
+					stationLocationsPromise=null;
+					throw error;
+				});
+			}
+			return stationLocationsPromise;
+		}
+		function distanceKm(lat1,lng1,lat2,lng2){
+			const radians=value=>value*Math.PI/180;
+			const deltaLat=radians(lat2-lat1),deltaLng=radians(lng2-lng1);
+			const arc=Math.sin(deltaLat/2)**2+Math.cos(radians(lat1))*Math.cos(radians(lat2))*Math.sin(deltaLng/2)**2;
+			return 6371*2*Math.atan2(Math.sqrt(arc),Math.sqrt(1-arc));
+		}
+		function nearestStationsTo(latitude,longitude,locations){
+			return [
+				...locations.schools.map(station=>({...station,type:'school'})),
+				...locations.stations.map(station=>({...station,type:'mrt'}))
+			].map(station=>({
+				name:station.name,
+				type:station.type,
+				distanceKm:Math.round(distanceKm(latitude,longitude,station.lat,station.lng)*10)/10
+			})).sort((first,second)=>first.distanceKm-second.distanceKm).slice(0,10);
+		}
 		let currentUser=null;
 		function openAuth(){document.getElementById('auth-modal').classList.add('show')}
 		function closeAuth(){document.getElementById('auth-modal').classList.remove('show')}
@@ -605,13 +642,56 @@
 		}
 		let toastTimer;function toast(message){const el=document.getElementById('toast');el.textContent=message;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2600)}
 		function normalizeIsbn(value){return String(value).trim().replace(/[-\s]/g,'').toUpperCase()}
-		async function lookupBookDatabase(isbn){
-			const response=await fetch(`/api/books?isbn=${encodeURIComponent(isbn)}`);
-			if(!response.headers.get('content-type')?.includes('application/json'))throw new Error('Book metadata service is unavailable');
+		function hasMatchingIsbn(identifiers,isbn){
+			const values=(Array.isArray(identifiers)?identifiers:[identifiers]).filter(Boolean).map(normalizeIsbn);
+			return !values.length||values.includes(isbn);
+		}
+		async function lookupGoogleBooks(isbn){
+			const params=new URLSearchParams({q:`isbn:${isbn}`,maxResults:'5'});
+			const response=await fetch(`https://www.googleapis.com/books/v1/volumes?${params}`);
+			if(!response.ok)throw new Error(`Google Books lookup failed (${response.status})`);
 			const data=await response.json();
-			if(response.status===404)return null;
-			if(!response.ok)throw new Error(data.error||`Book metadata request failed (${response.status})`);
-			return data;
+			const volume=(data.items||[]).find(item=>{
+				const identifiers=(item.volumeInfo?.industryIdentifiers||[]).map(entry=>entry.identifier);
+				return hasMatchingIsbn(identifiers,isbn);
+			});
+			if(!volume)return null;
+			const info=volume.volumeInfo||{};
+			if(!info.title)return null;
+			return {title:info.title,author:(info.authors||[]).join(', '),publisher:info.publisher||''};
+		}
+		async function lookupOpenLibrary(isbn){
+			const params=new URLSearchParams({isbn,limit:'5',fields:'title,author_name,publisher,isbn'});
+			const response=await fetch(`https://openlibrary.org/search.json?${params}`);
+			if(!response.ok)throw new Error(`Open Library lookup failed (${response.status})`);
+			const data=await response.json();
+			const book=(data.docs||[]).find(item=>hasMatchingIsbn(item.isbn,isbn));
+			if(!book?.title)return null;
+			return {
+				title:book.title,
+				author:(book.author_name||[]).join(', '),
+				publisher:(book.publisher||[])[0]||''
+			};
+		}
+		async function lookupBookDatabase(isbn){
+			const result={title:'',author:'',publisher:''};
+			const errors=[];
+			for(const lookup of [lookupGoogleBooks,lookupOpenLibrary]){
+				try{
+					const book=await lookup(isbn);
+					if(!book)continue;
+					for(const field of Object.keys(result)){
+						if(!result[field]&&book[field])result[field]=book[field];
+					}
+					if(result.title&&result.author&&result.publisher)break;
+				}catch(error){
+					console.error('ISBN metadata source lookup failed',error);
+					errors.push(error);
+				}
+			}
+			if(result.title)return result;
+			if(errors.length)throw new Error('metadata_sources_unavailable');
+			return null;
 		}
 		let pointEstimateRequestId=0;
 		async function updatePointEstimate(){
@@ -658,7 +738,7 @@
 			toast('正在查詢書目資料…');
 			try{
 				const book=await lookupBookDatabase(isbn);
-				if(!book){toast('資料庫找不到此 ISBN，請手動填寫書名與作者');return}
+				if(!book){toast('Google Books 與 Open Library 都找不到此 ISBN，請手動輸入書名與作者');return}
 				document.getElementById('input-title').value=book.title;document.getElementById('input-author').value=book.author||'';document.getElementById('input-publisher').value=book.publisher||'';
 				await updatePointEstimate();
 				const missing=[];
@@ -668,7 +748,7 @@
 			}catch(error){
 				console.error('ISBN lookup failed',error);
 				const message=error instanceof TypeError
-					?'無法連到書目 API。請從 VS Code「連接埠」面板開啟 4173 的網址，並確認伺服器仍在執行。'
+					?'無法連線到書目服務，請檢查網路後重試，或手動輸入書目。'
 					:error.message==='metadata_sources_unavailable'
 						?'書目來源暫時無法查詢，請稍後重試或手動輸入書目。'
 						:`書目查詢失敗：${error.message}`;
@@ -717,7 +797,27 @@
 			pendingMedia=[];renderMediaPreview();updatePointEstimate();toast(riskFlags.length?'已上架；短時間大量上架，獎勵資格待審查':'上架成功；獎勵須等超商取件驗證與 72 小時爭議期後發放');
 		}
 		function requestBook(id){openTradeOptions(id)}
-		async function locateNearestStation(){const status=document.getElementById('station-status');status.classList.add('show');if(!navigator.geolocation){status.textContent='此裝置不支援定位，請改用支援定位的瀏覽器。';return}status.textContent='正在取得位置…';navigator.geolocation.getCurrentPosition(async({coords})=>{status.textContent='定位成功，正在搜尋全台校園與捷運站…';try{const query=new URLSearchParams({lat:coords.latitude,lng:coords.longitude});const response=await fetch(`/api/stations?${query}`);const data=await response.json();if(!response.ok)throw new Error(data.error||`Station lookup failed (${response.status})`);renderStations(data.stations);renderDeliveryOptions(data.stations);status.textContent=`已搜尋 ${data.universityCount} 所大專校院與 ${data.mrtCount} 個捷運站，顯示最近 ${data.stations.length} 個站點。書箱位置為原型假設。`}catch(error){console.error('Station lookup failed',error);status.textContent='無法取得學校或捷運站資料，請稍後重試。'}},()=>{status.textContent='無法取得定位，請允許瀏覽器使用位置資訊。'},{enableHighAccuracy:true,timeout:10000,maximumAge:60000})}
+		async function locateNearestStation(){
+			const status=document.getElementById('station-status');
+			status.classList.add('show');
+			if(!navigator.geolocation){status.textContent='此裝置不支援定位，請改用支援定位的瀏覽器。';return}
+			status.textContent='正在取得位置…';
+			navigator.geolocation.getCurrentPosition(async({coords})=>{
+				status.textContent='定位成功，正在搜尋附近校園與捷運站…';
+				try{
+					const locations=await loadStationLocations();
+					const stations=nearestStationsTo(coords.latitude,coords.longitude,locations);
+					renderStations(stations);
+					renderDeliveryOptions(stations);
+					status.textContent=`已搜尋 ${locations.schools.length} 所大專校院與 ${locations.stations.length} 個捷運站，顯示最近 ${stations.length} 個站點。書箱位置為原型假設。`;
+				}catch(error){
+					console.error('Station lookup failed',error);
+					status.textContent='無法載入站點資料，請確認網路連線並重新嘗試。';
+				}
+			},()=>{
+				status.textContent='無法取得定位，請允許瀏覽器使用位置資訊。';
+			},{enableHighAccuracy:true,timeout:10000,maximumAge:60000});
+		}
 		let isbnScanner=null,scanResultHandled=false;
 		const scanButton=document.getElementById('btn-start-scan');
 		const scanStatus=document.getElementById('scan-status');
