@@ -6,7 +6,7 @@ create table if not exists public.shared_books (
     author text not null check (char_length(btrim(author)) between 1 and 200),
     publisher text not null default '' check (char_length(publisher) <= 200),
     points integer not null check (points between 40 and 180),
-    cycles integer not null default 0 check (cycles between 0 and 7),
+    cycles integer not null default 0 check (cycles between 0 and 8),
     condition text not null default '' check (condition in ('', 'excellent', 'good', 'fair', 'damaged')),
     condition_notes text not null default '' check (char_length(condition_notes) <= 500),
     condition_checks jsonb not null default '{}'::jsonb check (jsonb_typeof(condition_checks) = 'object'),
@@ -34,7 +34,14 @@ create policy "Anyone can list shared books"
     to anon, authenticated
     with check (true);
 
-grant select, insert on public.shared_books to anon, authenticated;
+drop policy if exists "Anyone can update shared books" on public.shared_books;
+create policy "Anyone can update shared books"
+    on public.shared_books for update
+    to anon, authenticated
+    using (true)
+    with check (true);
+
+grant select, insert, update on public.shared_books to anon, authenticated;
 grant usage, select on sequence public.shared_books_id_seq to anon, authenticated;
 
 create table if not exists public.shared_book_transactions (

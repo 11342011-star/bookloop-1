@@ -486,6 +486,35 @@
 				if(sharedTransactionSyncs.get(order.sharedTransactionId)===current)sharedTransactionSyncs.delete(order.sharedTransactionId);
 			});
 		}
+		async function patchSharedBookCycles(bookId,cycles){
+			if(!supabaseUrl||!supabasePublishableKey||!Number.isSafeInteger(Number(bookId))||Number(bookId)<=0)return;
+			const nextCycles=Math.max(0,Math.min(MAX_BOOK_CYCLES,Number(cycles)||0));
+			const response=await fetch(`${supabaseUrl}/rest/v1/shared_books?id=eq.${encodeURIComponent(bookId)}`,{
+				method:'PATCH',
+				headers:supabaseRequestHeaders({'Content-Type':'application/json',Prefer:'return=representation'}),
+				body:JSON.stringify({cycles:nextCycles}),
+			});
+			const data=await response.json();
+			if(!response.ok)throw new Error(data.message||data.error||`supabase_book_update_http_${response.status}`);
+			if(!Array.isArray(data)||data.length!==1)throw new Error('shared_book_not_updated');
+			sharedBooksSyncError=false;
+		}
+		function queueSharedSettlementSync(order,cycles){
+			if(!order.sharedTransactionId||!supabaseUrl||!supabasePublishableKey)return;
+			const previous=sharedTransactionSyncs.get(order.sharedTransactionId)||Promise.resolve();
+			const current=previous.catch(()=>{}).then(async()=>{
+				await patchSharedTransaction(order);
+				await patchSharedBookCycles(order.bookId,cycles);
+			});
+			sharedTransactionSyncs.set(order.sharedTransactionId,current);
+			current.catch(error=>{
+				console.error('Shared settlement could not be synchronized',error);
+				toast('交易已完成，但書籍流轉次數尚未同步；請重新整理後再試。');
+			}).finally(()=>{
+				if(sharedTransactionSyncs.get(order.sharedTransactionId)===current)sharedTransactionSyncs.delete(order.sharedTransactionId);
+				refreshSharedBooks();
+			});
+		}
 		const activeSharedTransactionStatuses=new Set(['negotiating','awaiting_payment','awaiting_shipment','shipped','cooldown','disputed','risk_review']);
 		function transactionForBook(bookId){
 			return sharedTransactions.find(transaction=>String(transaction.bookId)===String(bookId)&&activeSharedTransactionStatuses.has(transaction.status))
@@ -1042,9 +1071,9 @@
 			const bonus=order.bonusEligible?order.bonusPoints:0,credit=order.amountPoints+bonus;
 			order.status='settled';order.settledAt=Date.now();order.sellerPointsAwarded=credit;
 			if(credit){sellerBalances[order.sellerId]=(sellerBalances[order.sellerId]||0)+credit;sellerLedger.unshift({id:`sale-${order.id}`,sellerId:order.sellerId,sellerName:order.sellerName,title:order.title,amount:credit,bonus,promoRemaining:bonus,date:new Date().toLocaleString('zh-TW'),expiresAt:bonus?Date.now()+365*24*60*60*1000:null})}
-			order.carbonVerified=true;trackPlatformEvent('trade_settled',{isbn:order.isbn,mode:order.mode});userCarbon+=1.02;userCycles++;const book=books.find(item=>item.id===order.bookId),cycleKey=order.cycleKey||order.isbn||String(order.bookId);cycleCountsByIsbn[cycleKey]=Math.min(MAX_BOOK_CYCLES,Math.max(cycleCountsByIsbn[cycleKey]||0,(book?.cycles||0)+1));books=books.filter(item=>item.id!==order.bookId);
+			order.carbonVerified=true;trackPlatformEvent('trade_settled',{isbn:order.isbn,mode:order.mode});userCarbon+=1.02;userCycles++;const book=books.find(item=>item.id===order.bookId),cycleKey=order.cycleKey||order.isbn||String(order.bookId);const nextCycles=Math.min(MAX_BOOK_CYCLES,Math.max(cycleCountsByIsbn[cycleKey]||0,(book?.cycles||0)+1));cycleCountsByIsbn[cycleKey]=nextCycles;books=books.filter(item=>item.id!==order.bookId);
 			history.unshift({title:'完成共享流轉',detail:`《${order.title}》・${order.deliveryMethod==='bookbox'?'智慧書箱交付':'超商交付'}`,date:'剛剛',points:credit?`賣方 +${credit} 環點`:order.mode==='money'?`NT$${order.amountMoney} 原型流程`:'書籍交換完成'});
-			persistPrototypeState();queueSharedTransactionSync(order);updateAccount();renderBooks();renderWishlist();renderHistory();renderWallet();renderMyLibrary();toast(order.mode==='points'?`交易完成，賣方已入帳 ${credit} 點（原型）`:order.mode==='money'?'交付流程完成；金額及付款皆為原型模擬，未實際收款':'書籍交換流程完成（原型）');return true;
+			persistPrototypeState();queueSharedSettlementSync(order,nextCycles);updateAccount();renderBooks();renderWishlist();renderHistory();renderWallet();renderMyLibrary();toast(order.mode==='points'?`交易完成，賣方已入帳 ${credit} 點（原型）`:order.mode==='money'?'交付流程完成；金額及付款皆為原型模擬，未實際收款':'書籍交換流程完成（原型）');return true;
 		}
 		function approveRiskReview(id){
 			const order=orders.find(item=>item.id===id);if(!order||order.status!=='risk_review')return;
@@ -1153,7 +1182,7 @@
 			if(isBooks)loadAdminBooks();else loadAdminTransactions();
 		}
 		async function adminJson(path,options={}){
-			const response=await fetch(path,{...options,headers:{'Content-Type':'application/json',...(options.headers||{})},credentials:'same-origin',cache:'no-store'});
+			const response=await fetch(path,{...options,headers:{'Content-Type':'application/json',...(options.headers||{})},credentials:'include',cache:'no-store'});
 			if(response.status===401)throw new Error('admin_auth_required');
 			if(response.status===404||response.status===405)throw new Error('admin_backend_unavailable');
 			let payload=null;
@@ -1273,7 +1302,7 @@
 			status.classList.remove('show');
 			try{
 				const days=document.getElementById('admin-days').value;
-				const response=await fetch(`/api/admin/analytics?days=${encodeURIComponent(days)}`,{cache:'no-store',credentials:'same-origin'});
+				const response=await fetch(`/api/admin/analytics?days=${encodeURIComponent(days)}`,{cache:'no-store',credentials:'include'});
 				if(response.status===401){loginCard.hidden=false;return}
 				if(response.status===404||response.status===405)throw new Error('admin_backend_unavailable');
 				if(!response.ok)throw new Error(`Analytics request failed (${response.status})`);
@@ -1292,7 +1321,7 @@
 			event.preventDefault();
 			const password=document.getElementById('admin-password');
 			try{
-				const response=await fetch('/api/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({password:password.value})});
+				const response=await fetch('/api/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({password:password.value})});
 				if(response.status===404||response.status===405)throw new Error('admin_backend_unavailable');
 				const result=await response.json();
 				if(!response.ok)throw new Error(result.error||`Login failed (${response.status})`);
@@ -1304,9 +1333,22 @@
 				adminStatus('admin-login-status',error.message==='admin_backend_unavailable'?'目前網站沒有平台管理 API。請用同源部署的 Python 後端開啟；GitHub Pages 與靜態預覽無法提供管理員登入。':error.message==='invalid_admin_credentials'?'管理員密碼不正確。':error.message==='admin_password_not_configured'?'伺服器尚未設定安全的管理員密碼。':'登入失敗，請確認密碼或後端連線。',true);
 			}
 		}
+		async function checkAdminSession(){
+			try{
+				const response=await fetch('/api/admin/session',{method:'GET',cache:'no-store',credentials:'include'});
+				if(response.status===200){
+					const section=document.getElementById('section-admin');
+					if(section?.classList.contains('active'))await loadAdminAnalytics();
+				}
+				return response.status===200;
+			}catch(error){
+				console.error('Admin session check failed',error);
+				return false;
+			}
+		}
 		async function adminLogout(){
 			try{
-				const response=await fetch('/api/admin/logout',{method:'POST',credentials:'same-origin'});
+				const response=await fetch('/api/admin/logout',{method:'POST',credentials:'include'});
 				if(!response.ok)throw new Error(`Logout failed (${response.status})`);
 				await loadAdminAnalytics();
 			}catch(error){
@@ -1808,6 +1850,7 @@
 			}
 		}
 		scanButton.addEventListener('click',startIsbnScan);
+		checkAdminSession();
 		document.addEventListener('click',event=>{
 			const target=event.target instanceof Element?event.target.closest('[data-trade-book-id]'):null;
 			if(target)openTradeOptions(target.dataset.tradeBookId);
