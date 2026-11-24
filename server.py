@@ -688,6 +688,24 @@ class BookLoopHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(ROOT), **kwargs)
 
+    def allowed_cors_origin(self):
+        origin = self.headers.get("Origin", "")
+        allowed = {
+            "http://localhost:4173",
+            "http://127.0.0.1:4173",
+            "https://11342011-star.github.io",
+        }
+        configured = os.environ.get("BOOKLOOP_CORS_ORIGINS", "")
+        allowed.update(item.strip() for item in configured.split(",") if item.strip())
+        return origin if origin in allowed else ""
+
+    def send_cors_headers(self):
+        origin = self.allowed_cors_origin()
+        if origin:
+            self.send_header("Access-Control-Allow-Origin", origin)
+            self.send_header("Access-Control-Allow-Credentials", "true")
+            self.send_header("Vary", "Origin")
+
     def send_json(self, status, payload):
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
@@ -695,6 +713,7 @@ class BookLoopHandler(SimpleHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
         self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_cors_headers()
         self.end_headers()
         self.wfile.write(body)
 
@@ -765,6 +784,19 @@ class BookLoopHandler(SimpleHTTPRequestHandler):
             return [dict(row) for row in rows]
         finally:
             connection.close()
+
+    def do_OPTIONS(self):
+        if not self.allowed_cors_origin():
+            self.send_json(403, {"error": "cors_origin_not_allowed"})
+            return
+        self.send_response(204)
+        self.send_header("Access-Control-Allow-Origin", self.allowed_cors_origin())
+        self.send_header("Access-Control-Allow-Credentials", "true")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS")
+        self.send_header("Vary", "Origin")
+        self.send_header("Content-Length", "0")
+        self.end_headers()
 
     def do_POST(self):
         request = urlparse(self.path)
@@ -844,17 +876,20 @@ class BookLoopHandler(SimpleHTTPRequestHandler):
                 _admin_sessions[token] = now + ADMIN_SESSION_SECONDS
             with _admin_login_attempts_lock:
                 _admin_login_attempts.pop(client_ip, None)
+            cross_origin = bool(self.allowed_cors_origin())
             cookie = (
-                f"bookloop_admin_session={token}; HttpOnly; SameSite=Strict; "
+                f"bookloop_admin_session={token}; HttpOnly; "
+                f"SameSite={'None' if cross_origin else 'Strict'}; "
                 f"Path=/; Max-Age={ADMIN_SESSION_SECONDS}"
             )
             forwarded_proto = self.headers.get("X-Forwarded-Proto", "").split(",", 1)[0].strip().lower()
-            if forwarded_proto == "https":
+            if forwarded_proto == "https" or cross_origin:
                 cookie += "; Secure"
             self.send_response(200)
             self.send_header("Content-Type", "application/json; charset=utf-8")
             self.send_header("Cache-Control", "no-store")
             self.send_header("X-Content-Type-Options", "nosniff")
+            self.send_cors_headers()
             self.send_header("Set-Cookie", cookie)
             self.end_headers()
             self.wfile.write(json.dumps({"authenticated": True}).encode("utf-8"))
@@ -868,7 +903,9 @@ class BookLoopHandler(SimpleHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-Type", "application/json; charset=utf-8")
             self.send_header("Cache-Control", "no-store")
-            self.send_header("Set-Cookie", "bookloop_admin_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0")
+            self.send_cors_headers()
+            logout_same_site = "None" if self.allowed_cors_origin() else "Strict"
+            self.send_header("Set-Cookie", f"bookloop_admin_session=; HttpOnly; SameSite={logout_same_site}; Path=/; Max-Age=0; Secure")
             self.end_headers()
             self.wfile.write(b'{"authenticated":false}')
             return
@@ -924,6 +961,7 @@ class BookLoopHandler(SimpleHTTPRequestHandler):
             self.send_header("Content-Length", str(len(body)))
             self.send_header("Cache-Control", "no-store")
             self.send_header("Content-Disposition", 'attachment; filename="bookloop-platform-analytics.csv"')
+            self.send_cors_headers()
             self.end_headers()
             self.wfile.write(body)
             return

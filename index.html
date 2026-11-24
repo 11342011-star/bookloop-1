@@ -367,6 +367,8 @@
 		const supabaseConfig=window.BOOKLOOP_SUPABASE_CONFIG||{};
 		const supabaseUrl=typeof supabaseConfig.url==='string'?supabaseConfig.url.replace(/\/+$/,''):'';
 		const supabasePublishableKey=typeof supabaseConfig.publishableKey==='string'?supabaseConfig.publishableKey:'';
+		const apiBaseUrl=typeof supabaseConfig.apiBaseUrl==='string'?supabaseConfig.apiBaseUrl.replace(/\/+$/,''):'';
+		function adminApiUrl(path){return `${apiBaseUrl}${path}`}
 		function supabaseBookFromRow(row){
 			const id=Number(row.id);
 			if(!Number.isSafeInteger(id))throw new Error('invalid_supabase_book_id');
@@ -1182,7 +1184,7 @@
 			if(isBooks)loadAdminBooks();else loadAdminTransactions();
 		}
 		async function adminJson(path,options={}){
-			const response=await fetch(path,{...options,headers:{'Content-Type':'application/json',...(options.headers||{})},credentials:'include',cache:'no-store'});
+			const response=await fetch(adminApiUrl(path),{...options,headers:{'Content-Type':'application/json',...(options.headers||{})},credentials:'include',cache:'no-store'});
 			if(response.status===401)throw new Error('admin_auth_required');
 			if(response.status===404||response.status===405)throw new Error('admin_backend_unavailable');
 			let payload=null;
@@ -1302,7 +1304,7 @@
 			status.classList.remove('show');
 			try{
 				const days=document.getElementById('admin-days').value;
-				const response=await fetch(`/api/admin/analytics?days=${encodeURIComponent(days)}`,{cache:'no-store',credentials:'include'});
+				const response=await fetch(adminApiUrl(`/api/admin/analytics?days=${encodeURIComponent(days)}`),{cache:'no-store',credentials:'include'});
 				if(response.status===401){loginCard.hidden=false;return}
 				if(response.status===404||response.status===405)throw new Error('admin_backend_unavailable');
 				if(!response.ok)throw new Error(`Analytics request failed (${response.status})`);
@@ -1321,7 +1323,7 @@
 			event.preventDefault();
 			const password=document.getElementById('admin-password');
 			try{
-				const response=await fetch('/api/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({password:password.value})});
+				const response=await fetch(adminApiUrl('/api/admin/login'),{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({password:password.value})});
 				if(response.status===404||response.status===405)throw new Error('admin_backend_unavailable');
 				const result=await response.json();
 				if(!response.ok)throw new Error(result.error||`Login failed (${response.status})`);
@@ -1335,7 +1337,7 @@
 		}
 		async function checkAdminSession(){
 			try{
-				const response=await fetch('/api/admin/session',{method:'GET',cache:'no-store',credentials:'include'});
+				const response=await fetch(adminApiUrl('/api/admin/session'),{method:'GET',cache:'no-store',credentials:'include'});
 				if(response.status===200){
 					const section=document.getElementById('section-admin');
 					if(section?.classList.contains('active'))await loadAdminAnalytics();
@@ -1348,7 +1350,7 @@
 		}
 		async function adminLogout(){
 			try{
-				const response=await fetch('/api/admin/logout',{method:'POST',credentials:'include'});
+				const response=await fetch(adminApiUrl('/api/admin/logout'),{method:'POST',credentials:'include'});
 				if(!response.ok)throw new Error(`Logout failed (${response.status})`);
 				await loadAdminAnalytics();
 			}catch(error){
@@ -1358,7 +1360,7 @@
 		}
 		function exportAdminAnalytics(){
 			const days=document.getElementById('admin-days').value;
-			window.location.assign(`/api/admin/analytics.csv?days=${encodeURIComponent(days)}`);
+			window.location.assign(adminApiUrl(`/api/admin/analytics.csv?days=${encodeURIComponent(days)}`));
 		}
 		function openAuth(){document.getElementById('auth-modal').classList.add('show')}
 		function closeAuth(){document.getElementById('auth-modal').classList.remove('show')}
