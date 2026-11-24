@@ -324,7 +324,7 @@
 		function safe(value){return String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 		function isBookInWishlist(book){return myWishlist.some(item=>(book.isbn&&item.isbn===book.isbn)||item.title===book.title)}
 		function renderBookCards(items,emptyMessage){
-			return items.length?items.map((b,i)=>{const wished=isBookInWishlist(b);return `<article class="book-card"><div class="cover ${b.tone||['','blue','orange'][i%3]}">📖</div><div class="book-info"><h3 class="book-title">${safe(b.title)}</h3><div class="book-meta">${safe(b.author)}${b.publisher?'／'+safe(b.publisher):''}<br>已流轉 ${b.cycles} 次 · ${conditionLabels[b.condition]||'書況未標示'} · ${regionLabels[b.region]||'區域未標示'} · ${languageLabels[b.language]||'語言未標示'}${b.bookLocation?`<br>書籍位置：${safe(b.bookLocation)}`:''}<br>賣方：${safe(b.sellerName||'書友')}</div>${b.media?.length?`<div class="book-media">${b.media.map(m=>m.kind==='video'?`<video src="${safe(m.url)}" controls playsinline aria-label="${safe(m.name)}"></video>`:`<img src="${safe(m.url)}" alt="${safe(m.name)}">`).join('')}</div>`:''}<div class="book-bottom"><span class="location">⌖ ${safe(b.location)}</span><span class="points">${b.points} 環點</span></div></div><div class="book-card-actions"><button class="btn btn-small" type="button" data-trade-book-id="${safe(b.id)}">交易方式</button><button class="btn ${wished?'btn-wished':'btn-light'} btn-small" type="button" onclick="addBookToWishlist(${Number(b.id)})"${wished?' disabled':''}>${wished?'♥ 已想要':'♡ 想要'}</button></div></article>`}).join(''):`<div class="empty">${emptyMessage}</div>`;
+			return items.length?items.map((b,i)=>{const wished=isBookInWishlist(b);return `<article class="book-card"><div class="cover ${b.tone||['','blue','orange'][i%3]}">📖</div><div class="book-info"><h3 class="book-title">${safe(b.title)}</h3><div class="book-meta">${safe(b.author)}${b.publisher?'／'+safe(b.publisher):''}<br>已流轉 ${b.cycles} 次 · ${conditionLabels[b.condition]||'書況未標示'} · ${regionLabels[b.region]||'區域未標示'} · ${languageLabels[b.language]||'語言未標示'}${b.bookLocation?`<br>書籍位置：${safe(b.bookLocation)}`:''}<br>賣方：${safe(b.sellerName||'書友')}</div>${b.media?.length?`<div class="book-media">${b.media.map(m=>m.kind==='video'?`<video src="${safe(m.url)}" controls playsinline aria-label="${safe(m.name)}"></video>`:`<img src="${safe(m.url)}" alt="${safe(m.name)}">`).join('')}</div>`:''}<div class="book-bottom"><span class="location">⌖ ${safe(b.location)}</span><span class="points">${b.points} 環點</span></div></div><div class="book-card-actions"><button class="btn btn-small" type="button" data-trade-book-id="${safe(b.id)}">交易方式</button><button class="btn ${wished?'btn-wished':'btn-light'} btn-small" type="button" aria-pressed="${wished}" onclick="addBookToWishlist(${Number(b.id)})">${wished?'♥ 已想要':'♡ 想要'}</button></div></article>`}).join(''):`<div class="empty">${emptyMessage}</div>`;
 		}
 		function renderBooks(){
 			const availableBooks=books.filter(isBookAvailable);
@@ -770,7 +770,11 @@
 		function addBookToWishlist(id){
 			if(!requireAuth())return;
 			const book=books.find(item=>item.id===id);if(!book)return;
-			if(isBookInWishlist(book)){toast('這本書已在你的願望清單');return}
+			if(isBookInWishlist(book)){
+				const index=myWishlist.findIndex(item=>(book.isbn&&item.isbn===book.isbn)||item.title===book.title);
+				if(index>=0)myWishlist.splice(index,1);
+				persistPrototypeState();renderWishlist();renderBooks();toast('已從願望清單移除');return;
+			}
 			myWishlist.unshift({id:`wish-${Date.now()}`,title:book.title,author:book.author,isbn:book.isbn||''});persistPrototypeState();renderWishlist();renderBooks();toast('已加入願望清單');
 		}
 		function topUpPoints(){
