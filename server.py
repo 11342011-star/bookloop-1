@@ -1044,7 +1044,7 @@ class BookLoopHandler(SimpleHTTPRequestHandler):
 
 
 def main():
-    port = 4173
+    port = int(os.environ.get("PORT", "4173"))
     server = ThreadingHTTPServer(("0.0.0.0", port), BookLoopHandler)
     print(f"BookLoop is serving on http://localhost:{port}")
     server.serve_forever()

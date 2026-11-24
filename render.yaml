@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: bookloop
+    runtime: docker
+    plan: free
+    envVars:
+      - key: BOOKLOOP_ADMIN_PASSWORD
+        sync: false
+      - key: BOOKLOOP_ANALYTICS_DB
+        value: /tmp/bookloop_analytics.sqlite3
