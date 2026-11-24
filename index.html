@@ -1602,6 +1602,8 @@
 		async function locateNearestStation(){
 			const status=document.getElementById('station-status');
 			status.classList.add('show');
+			const isSecureOrigin=window.isSecureContext??(location.protocol==='https:'||['localhost','127.0.0.1','[::1]'].includes(location.hostname));
+			if(!isSecureOrigin){status.textContent='瀏覽器只允許 HTTPS 網站或 localhost 使用定位。請改用 HTTPS 網址開啟本站後再試。';return}
 			if(!navigator.geolocation){status.textContent='此裝置不支援定位，請改用支援定位的瀏覽器。';return}
 			status.textContent='正在取得位置…';
 			navigator.geolocation.getCurrentPosition(async({coords})=>{
@@ -1616,8 +1618,11 @@
 					console.error('Station lookup failed',error);
 					status.textContent='無法載入站點資料，請確認網路連線並重新嘗試。';
 				}
-			},()=>{
-				status.textContent='無法取得定位，請允許瀏覽器使用位置資訊。';
+			},error=>{
+				if(error.code===1)status.textContent='定位權限被拒絕。請在瀏覽器的網站設定中將「位置」改為允許，確認手機已開啟定位服務，再重新點選。';
+				else if(error.code===2)status.textContent='目前無法取得位置。請開啟手機定位服務、移至訊號較佳處，並確認瀏覽器可使用定位後重試。';
+				else if(error.code===3)status.textContent='定位逾時。請確認手機定位服務已開啟，稍後再重新定位。';
+				else status.textContent='無法取得位置，請確認瀏覽器定位權限與手機定位服務已開啟後重試。';
 			},{enableHighAccuracy:true,timeout:10000,maximumAge:60000});
 		}
 		let isbnScanner=null,scanResultHandled=false;
