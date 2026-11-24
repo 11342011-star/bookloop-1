@@ -304,17 +304,18 @@
 		const languageLabels={zh:'中文',en:'英文',ja:'日文',other:'其他'};
 		const conditionLabels={excellent:'9 成新以上',good:'約 7–8 成新',fair:'約 5–6 成新',damaged:'明顯使用痕跡'};
 		let books=[
-			{id:1,isbn:'9789571383125',title:'原子習慣：細微改變帶來巨大成就的實證法則',author:'詹姆斯．克利爾',publisher:'方智',points:90,cycles:3,location:'台大總圖智慧書箱站',region:'north',condition:'good',language:'zh',sellerId:'sample-seller-a',sellerName:'小安',listingBonusPoints:0,tone:''},
-			{id:2,isbn:'9789864769261',title:'Python 資料科學學習手冊',author:'Jake VanderPlas',publisher:'歐萊禮',points:120,cycles:2,location:'政大達賢智慧書箱站',region:'north',condition:'excellent',language:'en',sellerId:'sample-seller-b',sellerName:'書友 B',listingBonusPoints:0,tone:'blue'},
-			{id:3,isbn:'9789573339329',title:'也許你該找人聊聊',author:'蘿蕊．葛利布',publisher:'天下文化',points:75,cycles:1,location:'台大總圖智慧書箱站',region:'north',condition:'fair',language:'zh',sellerId:'sample-seller-c',sellerName:'書友 C',listingBonusPoints:0,tone:'orange'}
+			{id:-1,isbn:'9789571383125',title:'原子習慣：細微改變帶來巨大成就的實證法則',author:'詹姆斯．克利爾',publisher:'方智',points:90,cycles:3,location:'台大總圖智慧書箱站',region:'north',condition:'good',language:'zh',sellerId:'sample-seller-a',sellerName:'小安',listingBonusPoints:0,tone:''},
+			{id:-2,isbn:'9789864769261',title:'Python 資料科學學習手冊',author:'Jake VanderPlas',publisher:'歐萊禮',points:120,cycles:2,location:'政大達賢智慧書箱站',region:'north',condition:'excellent',language:'en',sellerId:'sample-seller-b',sellerName:'書友 B',listingBonusPoints:0,tone:'blue'},
+			{id:-3,isbn:'9789573339329',title:'也許你該找人聊聊',author:'蘿蕊．葛利布',publisher:'天下文化',points:75,cycles:1,location:'台大總圖智慧書箱站',region:'north',condition:'fair',language:'zh',sellerId:'sample-seller-c',sellerName:'書友 C',listingBonusPoints:0,tone:'orange'}
 		];
+		const sampleBookIds=new Map([['sample-seller-a',-1],['sample-seller-b',-2],['sample-seller-c',-3]]);
 		const samplePublicWishlists=[
 			{userId:'demo-reader-1',name:'小安',items:[{title:'Python 資料科學學習手冊',author:'Jake VanderPlas',isbn:'9789864769261'},{title:'也許你該找人聊聊',author:'蘿蕊．葛利布',isbn:'9789573339329'}]},
 			{userId:'demo-reader-2',name:'書友小林',items:[{title:'原子習慣',author:'詹姆斯．克利爾',isbn:'9789571383125'}]},
 		];
 		let myWishlist=[],orders=[],topupHistory=[],sellerLedger=[],sellerBalances={},listingEvents=[],cycleCountsByIsbn={},wishlistIsPublic=true;
 		let currentUser=null,demoAccounts=[],isPublishingBook=false,isSubmittingTrade=false,sharedBooksSyncError=false,sharedBooksRefreshPromise=null;
-		let sharedTransactions=[],libraryView='listed';
+		let sharedTransactions=[],sharedBookIds=new Set(),libraryView='listed';
 		const sharedTransactionSyncs=new Map();
 		let activeTradeBookId=null,activeTradeMode='swap',activeConversationOrderId=null,transactionBookboxLocations=[],transactionStationsError=null,transactionRenderKey='';
 		let transactionStationsLoaded=false;
@@ -396,10 +397,28 @@
 				headers:supabaseRequestHeaders({'Content-Type':'application/json',Prefer:'return=representation'}),
 				body:JSON.stringify(row),
 			});
-			const data=await response.json();
-			if(!response.ok)throw new Error(data.message||data.error||`supabase_transaction_http_${response.status}`);
+			const body=await response.text();
+			let data=null;
+			if(body){
+				try{data=JSON.parse(body)}catch{
+					if(response.ok)throw new Error('invalid_supabase_transaction_response');
+				}
+			}
+			if(!response.ok){
+				const error=new Error(data?.message||data?.details||data?.hint||data?.error||`supabase_transaction_http_${response.status}`);
+				error.code=data?.code||'';
+				error.status=response.status;
+				throw error;
+			}
 			if(!Array.isArray(data)||!data[0])throw new Error('invalid_supabase_transaction_response');
 			return supabaseTransactionFromRow(data[0]);
+		}
+		function sharedTransactionErrorMessage(error){
+			if(error.code==='23503')return '這本書尚未同步到共享書庫，請重新整理書庫後再試；尚未扣除環點。';
+			if(error.code==='23505')return '這本書已有進行中的交易，請重新整理書庫；尚未扣除環點。';
+			if(error.code==='42P01'||error.code==='PGRST205'||error.status===404)return '找不到共享交易資料表，請在 Supabase 執行最新的 supabase_schema.sql；尚未扣除環點。';
+			if(error.code==='42501'||error.status===401||error.status===403)return 'Supabase 拒絕建立交易，請確認資料表的 RLS 政策與寫入權限；尚未扣除環點。';
+			return '無法建立共享交易，請稍後重試；尚未扣除環點。';
 		}
 		async function patchSharedTransaction(order){
 			if(!supabaseUrl||!supabasePublishableKey||!order.sharedTransactionId)return;
@@ -544,12 +563,20 @@
 				try{
 					const [sharedBooks,transactions]=await Promise.all([fetchSharedBooks(),fetchSharedTransactions()]);
 					applySharedTransactions(transactions);
+					sharedBookIds=new Set(sharedBooks.map(book=>String(book.id)));
 					const knownIds=new Set(books.map(book=>String(book.id)));
 					const newBooks=sharedBooks.filter(book=>book&&book.id!==undefined&&!knownIds.has(String(book.id))).map(book=>({...book,media:[]}));
 					sharedBooksSyncError=false;
 					if(newBooks.length){
 						books=[...newBooks,...books];
 						persistPrototypeState();
+					}
+					if(supabaseUrl&&supabasePublishableKey){
+						const sharedBooksById=new Map(sharedBooks.map(book=>[String(book.id),book]));
+						books=books.map(book=>{
+							const sharedBook=sharedBooksById.get(String(book.id));
+							return sharedBook?{...sharedBook,media:book.media||[]}:book;
+						});
 					}
 					renderBooks();
 					renderWishlist();
@@ -668,7 +695,10 @@
 			userCycles=Number.isFinite(state.userCycles)&&state.userCycles>=0?state.userCycles:defaults.userCycles;
 			userCoupons=Number.isInteger(state.userCoupons)&&state.userCoupons>=0?state.userCoupons:defaults.userCoupons;
 			myWishlist=Array.isArray(state.myWishlist)?state.myWishlist:defaults.myWishlist;
-			orders=Array.isArray(state.orders)?state.orders:defaults.orders;
+			orders=Array.isArray(state.orders)?state.orders.map(order=>{
+				const sampleBookId=sampleBookIds.get(order.sellerId);
+				return sampleBookId?{...order,bookId:sampleBookId}:order;
+			}):defaults.orders;
 			topupHistory=Array.isArray(state.topupHistory)?state.topupHistory:defaults.topupHistory;
 			sellerLedger=Array.isArray(state.sellerLedger)?state.sellerLedger:defaults.sellerLedger;
 			sellerBalances=state.sellerBalances&&typeof state.sellerBalances==='object'?state.sellerBalances:defaults.sellerBalances;
@@ -691,9 +721,9 @@
 				const legacy=legacyRaw?JSON.parse(legacyRaw):null;
 				if(savedBooks){
 					const parsedBooks=JSON.parse(savedBooks);
-					if(Array.isArray(parsedBooks))books=parsedBooks.map(book=>({...book,media:[]}));
+					if(Array.isArray(parsedBooks))books=parsedBooks.map(book=>({...book,id:sampleBookIds.get(book.sellerId)||book.id,media:[]}));
 				}else if(Array.isArray(legacy?.books)){
-					books=legacy.books.map(book=>({...book,media:[]}));
+					books=legacy.books.map(book=>({...book,id:sampleBookIds.get(book.sellerId)||book.id,media:[]}));
 					localStorage.setItem('bookloop-books',JSON.stringify(books));
 				}
 				const savedCycles=localStorage.getItem('bookloop-cycle-counts');
@@ -905,13 +935,21 @@
 			}
 			isSubmittingTrade=true;
 			try{
-				const sharedTransaction=await createSharedTransaction(order);
-				if(supabaseUrl&&supabasePublishableKey&&!sharedTransaction)throw new Error('shared_transaction_not_created');
-				order.sharedTransactionId=sharedTransaction?.id||order.id;
-				if(sharedTransaction)sharedTransactions.unshift(sharedTransaction);
+				if(supabaseUrl&&supabasePublishableKey){
+					await refreshSharedBooks();
+					if(sharedBooksSyncError)throw new Error('shared_books_unavailable');
+					if(sharedBookIds.has(String(order.bookId))){
+						const sharedTransaction=await createSharedTransaction(order);
+						if(!sharedTransaction)throw new Error('shared_transaction_not_created');
+						order.sharedTransactionId=sharedTransaction.id;
+						sharedTransactions.unshift(sharedTransaction);
+					}
+				}else{
+					order.sharedTransactionId=order.id;
+				}
 			}catch(error){
 				console.error('Shared transaction could not be created',error);
-				toast('無法建立共享交易，請稍後重試；尚未扣除環點。');
+				toast(error.message==='shared_books_unavailable'?'無法確認共享書庫狀態，請檢查連線後再試；尚未扣除環點。':sharedTransactionErrorMessage(error));
 				return;
 			}finally{
 				isSubmittingTrade=false;

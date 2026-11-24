@@ -36,6 +36,9 @@ but point top-ups, balances, detailed orders, chat, and wishlists remain
 browser-local in `localStorage`. Local demo accounts have separate IDs, but
 these IDs are not verified, do not authenticate real Google/Apple accounts, and
 are not shared between browsers or devices.
+Built-in sample books are local examples, so orders for them stay local; only
+books confirmed in the Supabase shared catalog create shared transaction
+records.
 Each local demo account receives 150 starter points once, after its first
 successful book listing. Listing points use the backend rules-based estimator:
 ISBN validity, catalog fields, condition, evidence, and previous circulations
